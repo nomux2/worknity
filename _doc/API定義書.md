@@ -1,6 +1,6 @@
 # APIインターフェース定義書
 
-本書は、ミニマリスト業務管理システム「Worknity（フェーズ1）」における、フロントエンド（React SPA）およびAIエージェントと、バックエンド（Laravel API）間の通信仕様を定義する。
+本書は、ミニマリスト業務統合サービス「Worknity（フェーズ1）」における、フロントエンド（React SPA）およびAIエージェントと、バックエンド（Laravel API）間の通信仕様を定義する。
 
 ---
 
@@ -59,12 +59,12 @@
 ### 2.1. ログイン
 * **エンドポイント：** `POST /auth/login`
 * **認証：** 不要
-* **説明：** メールアドレスとパスワードで認証し、JWTを発行する。
+* **説明：** メールアドレスまたはユーザーIDと、パスワードで認証し、JWTを発行する。
 
 #### リクエストボディ
 ```json
 {
-  "email": "admin@example.com",
+  "login_id": "admin@example.com", // メールアドレスまたはユーザーIDを入力
   "password": "secure_password"
 }
 ```
@@ -78,16 +78,65 @@
   "user": {
     "id": 1,
     "email": "admin@example.com",
+    "login_id": "admin_user",
     "role": "admin",
-    "company_id": 101,
-    "company_name": "ワークニティ株式会社"
+    "organization_id": 101,
+    "organization_name": "ワークニティ流通",
+    "setup_completed": true,
+    "organizations": [
+      {
+        "id": 101,
+        "name": "ワークニティ流通"
+      }
+    ]
   }
 }
 ```
 
 ---
 
-### 2.2. ログアウト
+### 2.2. 新規登録（メールアドレス・パスワード）
+* **エンドポイント：** `POST /auth/register`
+* **認証：** 不要
+* **説明：** メールアドレス（またはユーザーID）とパスワードで新しいテナント（組織管理者）アカウントを作成する。
+
+#### リクエストボディ
+```json
+{
+  "email": "admin@example.com", // 任意（email または login_id のどちらかが必須）
+  "login_id": "admin_user",     // 任意（email または login_id のどちらかが必須）
+  "password": "secure_password"
+}
+```
+
+#### レスポンス（HTTP 201 Created）
+```json
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "token_type": "Bearer",
+  "expires_in": 3600,
+  "user": {
+    "id": 1,
+    "email": "admin@example.com",
+    "login_id": "admin_user",
+    "role": "admin",
+    "organization_id": 101,
+    "organization_name": "", // 新規登録直後は空文字。ホーム画面のモーダルで登録する。
+    "setup_completed": false,
+    "organizations": [
+      {
+        "id": 101,
+        "name": ""
+      }
+    ]
+  },
+  "is_new_user": true
+}
+```
+
+---
+
+### 2.3. ログアウト
 * **エンドポイント：** `POST /auth/logout`
 * **認証：** 必要
 * **説明：** 現在のJWTトークンを無効化する。
@@ -101,12 +150,16 @@
 
 ---
 
-### 2.3. トークンリフレッシュ
+### 2.4. トークンリフレッシュ
 * **エンドポイント：** `POST /auth/refresh`
-* **認証：** 必要（期限切れ間近、または期限切れのトークン）
-* **説明：** 新しいJWTトークンを再発行する（サイレントリフレッシュ用）。
+* **認証：** 不要（ヘッダの JWT 送信は不要。Cookie を使用）
+* **説明：** セキュアCookie（`HttpOnly`）に含まれるリフレッシュトークンを用いて、新しいJWTアクセストークンを再発行する（画面リロード時の自動ログインやサイレントリフレッシュ用）。
+
+#### クッキー（送信）
+* `refresh_token` (string, 必須): 暗号化されたリフレッシュトークン。リクエスト時にブラウザから自動送信されます。
 
 #### レスポンス（HTTP 200 OK）
+※レスポンスヘッダの `Set-Cookie` で新しい `refresh_token` が返却（Cookieのローテーション）されます。
 ```json
 {
   "access_token": "new_eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
@@ -117,7 +170,7 @@
 
 ---
 
-### 2.4. ログインユーザー情報取得
+### 2.5. ログインユーザー情報取得
 * **エンドポイント：** `GET /auth/me`
 * **認証：** 必要
 * **説明：** 現在ログインしているユーザーの情報を取得する。
@@ -128,14 +181,15 @@
   "id": 1,
   "email": "admin@example.com",
   "role": "admin",
-  "company_id": 101,
-  "company_name": "ワークニティ株式会社"
+  "organization_id": 101,
+  "organization_name": "ワークニティ流通",
+  "setup_completed": true
 }
 ```
 
 ---
 
-### 2.5. ソーシャルログイン（リダイレクトURL取得）
+### 2.6. ソーシャルログイン（リダイレクトURL取得）
 * **エンドポイント：** `GET /auth/{provider}/redirect`
 * **認証：** 不要
 * **説明：** 指定したソーシャルプロバイダ（`google`, `line`, `microsoft`, `yahoo`）のOAuth認証画面へ遷移するためのURLを返却する。
@@ -152,7 +206,7 @@
 
 ---
 
-### 2.6. ソーシャルログイン（コールバック処理）
+### 2.7. ソーシャルログイン（コールバック処理）
 * **エンドポイント：** `GET /auth/{provider}/callback`
 * **認証：** 不要
 * **説明：** 各プラットフォームでの認証完了後、フロントエンドが認可コードを受け取ってバックエンドへ送信し、認証（および新規登録）を完了させてJWTを発行する。
@@ -174,8 +228,9 @@
     "id": 2,
     "email": "social_user@example.com",
     "role": "admin",
-    "company_id": 102,
-    "company_name": "" // 新規ユーザー登録時は空文字。既存ユーザーは既存の会社名
+    "organization_id": 102,
+    "organization_name": "", // 新規ユーザー登録時は空文字。既存ユーザーは既存の組織名
+    "setup_completed": false // 新規登録の場合は false、既存のログインの場合は true
   },
   "is_new_user": true // 新規登録の場合は true、既存のログインの場合は false
 }
@@ -183,17 +238,17 @@
 
 ---
 
-### 2.7. 新規テナント初期セットアップ（会社名登録）
-* **エンドポイント：** `PUT /auth/tenant/setup`
-* **認証：** 必要（`role = admin` かつ `is_new_user = true` 時のみ）
-* **説明：** ソーシャルログイン等で新規自動作成されたテナントに対して、最初の会社名（屋号）を設定する。
+### 2.8. 新規テナント初期セットアップ（組織名登録）
+* **エンドポイント：** `PUT /auth/organization/setup`
+* **認証：** 必要（`role = admin` かつ `setup_completed = false` 時のみ）
+* **説明：** 新規作成されたテナント（組織）に対して、最初の組織名（グループ・チーム名や屋号）を設定する。
 
 #### リクエストボディ
-* `company_name` (string, 必須): 登録する企業名・屋号 (1〜255文字)
+* `organization_name` (string, 必須): 登録する組織名・グループ名・屋号 (1〜255文字)
 
 ```json
 {
-  "company_name": "ワークニティ流通"
+  "organization_name": "ワークニティ流通"
 }
 ```
 
@@ -201,7 +256,7 @@
 ```json
 {
   "message": "初期セットアップが完了しました。",
-  "company": {
+  "organization": {
     "id": 102,
     "name": "ワークニティ流通"
   }
@@ -210,7 +265,7 @@
 
 ---
 
-### 2.8. パスキー（WebAuthn）登録オプション取得
+### 2.9. パスキー（WebAuthn）登録オプション取得
 * **エンドポイント：** `POST /auth/passkey/register/options`
 * **認証：** 必要
 * **説明：** ログイン中のユーザーが現在使用しているデバイスにパスキーを新規登録するための暗号パラメータ（チャレンジ値など）を生成する。
@@ -229,7 +284,7 @@
 
 ---
 
-### 2.9. パスキー（WebAuthn）登録実行
+### 2.10. パスキー（WebAuthn）登録実行
 * **エンドポイント：** `POST /auth/passkey/register`
 * **認証：** 必要
 * **説明：** デバイスが生成した公開鍵データ（認証証明）をバックエンドに送信し、パスキー登録を完了する。
@@ -246,7 +301,7 @@
 
 ---
 
-### 2.10. パスキー（WebAuthn）ログインオプション取得
+### 2.11. パスキー（WebAuthn）ログインオプション取得
 * **エンドポイント：** `POST /auth/passkey/login/options`
 * **認証：** 不要
 * **説明：** パスキーでログインを開始するためのパラメータを生成する。
@@ -275,7 +330,7 @@
 
 ---
 
-### 2.11. パスキー（WebAuthn）ログイン実行
+### 2.12. パスキー（WebAuthn）ログイン実行
 * **エンドポイント：** `POST /auth/passkey/login`
 * **認証：** 不要
 * **説明：** デバイスで生体認証をパスした結果（署名データ）をバックエンドへ送信し、ログイン処理（JWT発行）を完了する。
@@ -292,9 +347,55 @@
   "user": {
     "id": 1,
     "email": "user@example.com",
+    "login_id": "user_id",
     "role": "admin",
-    "company_id": 101,
-    "company_name": "ワークニティ株式会社"
+    "organization_id": 101,
+    "organization_name": "ワークニティ流通",
+    "setup_completed": true,
+    "organizations": [
+      {
+        "id": 101,
+        "name": "ワークニティ流通"
+      }
+    ]
+  }
+}
+```
+
+---
+
+### 2.13. 組織（グループ）切り替え
+* **エンドポイント：** `POST /auth/organization/switch`
+* **認証：** 必要
+* **説明：** ログインしているユーザーが操作する組織（グループ）を切り替え、切り替え先組織の権限情報を含む新しいJWTを発行する。
+
+#### リクエストボディ
+* `organization_id` (integer, 必須): 切り替え先の組織ID
+
+```json
+{
+  "organization_id": 102
+}
+```
+
+#### レスポンス（HTTP 200 OK）
+```json
+{
+  "access_token": "new_eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "token_type": "Bearer",
+  "expires_in": 3600,
+  "user": {
+    "id": 1,
+    "email": "user@example.com",
+    "login_id": "user_id",
+    "role": "staff", // 切り替え先組織におけるロール
+    "organization_id": 102,
+    "organization_name": "渋谷ボランティア支部",
+    "setup_completed": true,
+    "organizations": [
+      { "id": 101, "name": "ワークニティ流通" },
+      { "id": 102, "name": "渋谷ボランティア支部" }
+    ]
   }
 }
 ```
@@ -303,7 +404,7 @@
 
 ## 3. 在庫管理API（コア機能）
 
-すべての在庫管理APIは、JWTに含まれる `company_id` に基づき自動的にテナントデータが隔離（データガード）される。
+すべての在庫管理APIは、JWTに含まれる `organization_id` に基づき自動的にテナントデータが隔離（データガード）される。
 
 ### 3.1. 在庫一覧取得
 * **エンドポイント：** `GET /stocks`
@@ -323,6 +424,8 @@
       "id": 10,
       "product_name": "ミネラルウォーター 500ml",
       "quantity": 120,
+      "minimum_quantity": 50, // 安全在庫数（しきい値）
+      "recent_quantities": [100, 100, 105, 120, 120, 115, 120], // 直近の数量推移（スパークライン用、最大7件）
       "attributes": {
         "expiration_date": "2026-12-31",
         "storage_location": "A倉庫-棚3"
@@ -334,6 +437,8 @@
       "id": 11,
       "product_name": "オフィス用紙 A4",
       "quantity": 15,
+      "minimum_quantity": 20,
+      "recent_quantities": [20, 20, 18, 18, 15, 15, 15],
       "attributes": {},
       "created_at": "2026-06-02T03:05:00Z",
       "updated_at": "2026-06-02T03:05:00Z"
@@ -358,12 +463,14 @@
 #### リクエストボディ
 * `product_name` (string, 必須): 商品名 (1〜255文字)
 * `quantity` (integer, 任意): 初期数量 (0以上の整数。デフォルト: 0)
+* `minimum_quantity` (integer, 任意): 安全在庫数 (0以上の整数。デフォルト: 0)
 * `attributes` (object, 任意): 拡張属性JSONオブジェクト
 
 ```json
 {
   "product_name": "アルコール消毒液",
   "quantity": 10,
+  "minimum_quantity": 5,
   "attributes": {
     "temperature_zone": "room_temperature"
   }
@@ -376,6 +483,7 @@
   "id": 12,
   "product_name": "アルコール消毒液",
   "quantity": 10,
+  "minimum_quantity": 5,
   "attributes": {
     "temperature_zone": "room_temperature"
   },
@@ -406,6 +514,7 @@
   "id": 10,
   "product_name": "ミネラルウォーター 500ml",
   "quantity": 170, // 120 + 50
+  "minimum_quantity": 50,
   "attributes": {
     "expiration_date": "2026-12-31",
     "storage_location": "A倉庫-棚3"
@@ -437,6 +546,7 @@
   "id": 10,
   "product_name": "ミネラルウォーター 500ml",
   "quantity": 100, // 120 - 20
+  "minimum_quantity": 50,
   "attributes": {
     "expiration_date": "2026-12-31",
     "storage_location": "A倉庫-棚3"
@@ -467,6 +577,7 @@
   "id": 10,
   "product_name": "ミネラルウォーター 500ml",
   "quantity": 95, // 95 に上書き
+  "minimum_quantity": 50,
   "attributes": {
     "expiration_date": "2026-12-31",
     "storage_location": "A倉庫-棚3"
@@ -528,7 +639,7 @@
   "id": 3,
   "email": "staff_sato@example.com",
   "role": "staff", // 自動的に 'staff' ロールが付与される
-  "company_id": 101, // 管理者の company_id が自動で設定される
+  "organization_id": 101, // 管理者の organization_id が自動で設定される
   "created_at": "2026-06-02T04:19:15Z"
 }
 ```
