@@ -1,7 +1,7 @@
 import React, { forwardRef, useState, useEffect, useRef } from 'react';
 import type { SelectHTMLAttributes, CSSProperties } from 'react';
 
-export interface SelectProps extends Omit<SelectHTMLAttributes<HTMLSelectElement>, 'value' | 'onChange'> {
+export interface SelectProps extends Omit<SelectHTMLAttributes<HTMLSelectElement>, 'value' | 'onChange' | 'size'> {
   label?: string;
   error?: string;
   helperText?: string;
@@ -11,10 +11,11 @@ export interface SelectProps extends Omit<SelectHTMLAttributes<HTMLSelectElement
   value?: string | number;
   onChange?: (e: React.ChangeEvent<HTMLSelectElement>) => void;
   placeholder?: string;
+  size?: 'sm' | 'md';
 }
 
 export const Select = forwardRef<HTMLSelectElement, SelectProps>(
-  ({ label, error, helperText, className = '', containerClassName = '', containerStyle, id, options = [], children, value, onChange, disabled, placeholder, ...props }, ref) => {
+  ({ label, error, helperText, className = '', containerClassName = '', containerStyle, id, options = [], children, value, onChange, disabled, placeholder, size = 'md', ...props }, ref) => {
     const [isOpen, setIsOpen] = useState<boolean>(false);
     const [highlightedIndex, setHighlightedIndex] = useState<number>(-1);
     
@@ -184,7 +185,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
         <button
           ref={triggerRef}
           type="button"
-          className={`ui-select-trigger ${isOpen ? 'active' : ''} ${error ? 'error' : ''} ${className}`}
+          className={`ui-select-trigger ${size === 'sm' ? 'sm' : ''} ${isOpen ? 'active' : ''} ${error ? 'error' : ''} ${className}`}
           onClick={handleTriggerClick}
           onKeyDown={handleKeyDown}
           disabled={disabled}

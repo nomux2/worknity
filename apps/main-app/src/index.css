@@ -2235,6 +2235,19 @@ a:hover {
   user-select: none;
 }
 
+.ui-select-trigger.sm {
+  padding: 0.35rem 0.65rem;
+  padding-right: 1.8rem;
+  font-size: 0.85rem;
+  min-height: 32px;
+  border-radius: var(--border-radius-sm, 6px);
+}
+
+.ui-select-trigger.sm .ui-select-arrow {
+  right: 0.55rem;
+  font-size: 0.7rem;
+}
+
 .ui-select-trigger:focus,
 .ui-select-trigger.active {
   border-color: var(--primary);

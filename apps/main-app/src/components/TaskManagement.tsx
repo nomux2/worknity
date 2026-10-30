@@ -474,21 +474,31 @@ export const TaskManagement: React.FC<TaskManagementProps> = ({ addToast, isAdmi
           <h2>タスク管理</h2>
           
           {/* Project dropdown */}
-          <select className="form-select form-select-sm" value={filterProjectId} onChange={(e) => setFilterProjectId(e.target.value)}>
-            <option value="">すべてのプロジェクト</option>
-            <option value="0">プロジェクトなし（日常ルーティン）</option>
-            {projects.map(p => (
-              <option key={p.id} value={p.id}>{p.name}</option>
-            ))}
-          </select>
- 
+          <Select
+            size="sm"
+            containerStyle={{ width: '220px' }}
+            value={filterProjectId}
+            onChange={(e) => setFilterProjectId(e.target.value)}
+            options={[
+              { value: '', label: 'すべてのプロジェクト' },
+              { value: '0', label: 'プロジェクトなし（日常ルーティン）' },
+              ...projects.map(p => ({ value: String(p.id), label: p.name }))
+            ]}
+          />
+
           {/* Status dropdown */}
-          <select className="form-select form-select-sm" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
-            <option value="">すべての状況</option>
-            <option value="todo">未着手</option>
-            <option value="doing">進行中</option>
-            <option value="done">完了</option>
-          </select>
+          <Select
+            size="sm"
+            containerStyle={{ width: '150px' }}
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            options={[
+              { value: '', label: 'すべての状況' },
+              { value: 'todo', label: '未着手' },
+              { value: 'doing', label: '進行中' },
+              { value: 'done', label: '完了' }
+            ]}
+          />
  
           {/* View mode switcher */}
           <div className="btn-group">
@@ -765,17 +775,19 @@ export const TaskManagement: React.FC<TaskManagementProps> = ({ addToast, isAdmi
  
                 {isRecurring && (
                   <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
-                    <div className="form-group">
-                      <label className="form-label">繰り返しパターン</label>
-                      <select className="form-select" value={repeatPattern} onChange={(e) => setRepeatPattern(e.target.value)}>
-                        <option value="daily">毎日</option>
-                        <option value="weekly">毎週</option>
-                        <option value="biweekly">隔週</option>
-                        <option value="monthly">毎月</option>
-                        <option value="first_day_of_month">月初 (1日)</option>
-                        <option value="last_day_of_month">月末</option>
-                      </select>
-                    </div>
+                    <Select
+                      label="繰り返しパターン"
+                      value={repeatPattern}
+                      onChange={(e) => setRepeatPattern(e.target.value)}
+                      options={[
+                        { value: 'daily', label: '毎日' },
+                        { value: 'weekly', label: '毎週' },
+                        { value: 'biweekly', label: '隔週' },
+                        { value: 'monthly', label: '毎月' },
+                        { value: 'first_day_of_month', label: '月初 (1日)' },
+                        { value: 'last_day_of_month', label: '月末' }
+                      ]}
+                    />
  
                     {(repeatPattern === 'weekly' || repeatPattern === 'biweekly') && (
                       <div className="form-group">
@@ -798,15 +810,17 @@ export const TaskManagement: React.FC<TaskManagementProps> = ({ addToast, isAdmi
                       </div>
                     )}
  
-                    <div className="form-group">
-                      <label className="form-label">非稼働日（休日）と重なった場合</label>
-                      <select className="form-select" value={repeatNonWorking} onChange={(e) => setRepeatNonWorking(e.target.value)}>
-                        <option value="skip">スキップ（生成しない）</option>
-                        <option value="as_is">そのまま生成</option>
-                        <option value="next_working_day">翌稼働日にシフト</option>
-                        <option value="prev_working_day">前稼働日にシフト</option>
-                      </select>
-                    </div>
+                    <Select
+                      label="非稼働日（休日）と重なった場合"
+                      value={repeatNonWorking}
+                      onChange={(e) => setRepeatNonWorking(e.target.value)}
+                      options={[
+                        { value: 'skip', label: 'スキップ（生成しない）' },
+                        { value: 'as_is', label: 'そのまま生成' },
+                        { value: 'next_working_day', label: '翌稼働日にシフト' },
+                        { value: 'prev_working_day', label: '前稼働日にシフト' }
+                      ]}
+                    />
                   </div>
                 )}
               </div>
@@ -956,30 +970,42 @@ export const TaskManagement: React.FC<TaskManagementProps> = ({ addToast, isAdmi
                 {/* Post New Comment */}
                 <form onSubmit={handlePostCommentSubmit} style={{ marginTop: '1rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
                   <div className="grid grid-2" style={{ gap: '0.5rem', marginBottom: '0.5rem' }}>
-                    <div className="form-group">
-                      <select className="form-select form-select-sm" value={commentType} onChange={(e) => setCommentType(e.target.value)}>
-                        <option value="communication">連絡</option>
-                        <option value="handover">申し送り</option>
-                        <option value="log">作業ログ</option>
-                        <option value="memo">メモ</option>
-                      </select>
-                    </div>
-                    <div className="form-group">
-                      <select className="form-select form-select-sm" value={commentImportance} onChange={(e) => setCommentImportance(e.target.value)}>
-                        <option value="low">重要度: 低</option>
-                        <option value="medium">重要度: 中</option>
-                        <option value="high">重要度: 高</option>
-                      </select>
-                    </div>
+                    <Select
+                      size="sm"
+                      value={commentType}
+                      onChange={(e) => setCommentType(e.target.value)}
+                      options={[
+                        { value: 'communication', label: '連絡' },
+                        { value: 'handover', label: '申し送り' },
+                        { value: 'log', label: '作業ログ' },
+                        { value: 'memo', label: 'メモ' }
+                      ]}
+                    />
+                    <Select
+                      size="sm"
+                      value={commentImportance}
+                      onChange={(e) => setCommentImportance(e.target.value)}
+                      options={[
+                        { value: 'low', label: '重要度: 低' },
+                        { value: 'medium', label: '重要度: 中' },
+                        { value: 'high', label: '重要度: 高' }
+                      ]}
+                    />
                   </div>
  
-                  <div className="form-group" style={{ marginBottom: '0.5rem' }}>
-                    <select className="form-select form-select-sm" value={commentRelatedTaskId} onChange={(e) => setCommentRelatedTaskId(e.target.value)}>
-                      <option value="">関連タスク: なし</option>
-                      {tasks.filter(t => t.id !== selectedTask?.id).map(t => (
-                        <option key={t.id} value={t.id}>{t.name}</option>
-                      ))}
-                    </select>
+                  <div style={{ marginBottom: '0.5rem' }}>
+                    <Select
+                      size="sm"
+                      value={commentRelatedTaskId}
+                      onChange={(e) => setCommentRelatedTaskId(e.target.value)}
+                      options={[
+                        { value: '', label: '関連タスク: なし' },
+                        ...tasks.filter(t => t.id !== selectedTask?.id).map(t => ({
+                          value: String(t.id),
+                          label: t.name
+                        }))
+                      ]}
+                    />
                   </div>
 
                   <TextArea

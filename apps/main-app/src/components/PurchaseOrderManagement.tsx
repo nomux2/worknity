@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Input } from './ui/Input';
+import { Select } from './ui/Select';
 import { OrderIcon } from './ui/Icons';
 
 interface PartnerItem {
@@ -457,23 +458,24 @@ export const PurchaseOrderManagement: React.FC<PurchaseOrderManagementProps> = (
         </div>
 
         {/* Filter bar */}
-        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
-          <select 
-            className="form-control"
-            style={{ flex: 1, padding: '0.4rem', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-app)', color: 'var(--text-main)' }}
+        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', alignItems: 'center' }}>
+          <Select 
+            size="sm"
+            containerStyle={{ flex: 1 }}
             value={statusFilter}
             onChange={(e) => {
               setStatusFilter(e.target.value);
               setSelectedOrder(null);
             }}
-          >
-            <option value="">すべての状態</option>
-            <option value="draft">下書き</option>
-            <option value="ordered">発注済</option>
-            <option value="partially_received">一部入荷</option>
-            <option value="completed">入荷完了</option>
-            <option value="cancelled">キャンセル</option>
-          </select>
+            options={[
+              { value: '', label: 'すべての状態' },
+              { value: 'draft', label: '下書き' },
+              { value: 'ordered', label: '発注済' },
+              { value: 'partially_received', label: '一部入荷' },
+              { value: 'completed', label: '入荷完了' },
+              { value: 'cancelled', label: 'キャンセル' }
+            ]}
+          />
           <input 
             type="text"
             className="form-control"
@@ -627,21 +629,16 @@ export const PurchaseOrderManagement: React.FC<PurchaseOrderManagementProps> = (
                 <div style={{ flex: 1, overflowY: 'auto', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                   
                   {/* Partner select */}
-                  <div className="form-group">
-                    <label style={{ fontWeight: 600, color: 'var(--text-main)', display: 'block', marginBottom: '0.4rem' }}>発注先取引先</label>
-                    <select
-                      className="form-control"
-                      style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-app)', color: 'var(--text-main)' }}
-                      value={formPartnerId}
-                      onChange={(e) => setFormPartnerId(Number(e.target.value))}
-                      required
-                    >
-                      <option value="0">取引先を選択してください</option>
-                      {partners.map(p => (
-                        <option key={p.id} value={p.id}>{p.name}</option>
-                      ))}
-                    </select>
-                  </div>
+                  <Select
+                    label="発注先取引先"
+                    value={formPartnerId}
+                    onChange={(e) => setFormPartnerId(Number(e.target.value))}
+                    required
+                    options={[
+                      { value: '0', label: '取引先を選択してください' },
+                      ...partners.map(p => ({ value: String(p.id), label: p.name }))
+                    ]}
+                  />
 
                   {/* Dates */}
                   <div style={{ display: 'flex', gap: '1rem' }}>
@@ -705,18 +702,20 @@ export const PurchaseOrderManagement: React.FC<PurchaseOrderManagementProps> = (
                           }}
                         >
                           {/* Stock Select */}
-                          <select
-                            className="form-control"
-                            style={{ flex: 3, padding: '0.4rem', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-app)', color: 'var(--text-main)' }}
+                          <Select
+                            size="sm"
+                            containerStyle={{ flex: 3 }}
                             value={item.stock_id}
                             onChange={(e) => handleItemChange(index, 'stock_id', Number(e.target.value))}
                             required
-                          >
-                            <option value="0">商品を選択...</option>
-                            {stocks.map(s => (
-                              <option key={s.id} value={s.id}>{s.product_name} (在庫: {s.quantity})</option>
-                            ))}
-                          </select>
+                            options={[
+                              { value: '0', label: '商品を選択...' },
+                              ...stocks.map(s => ({
+                                value: String(s.id),
+                                label: `${s.product_name} (在庫: ${s.quantity})`
+                              }))
+                            ]}
+                          />
 
                           {/* Quantity */}
                           <input

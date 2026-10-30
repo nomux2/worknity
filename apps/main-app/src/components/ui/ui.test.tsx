@@ -163,6 +163,23 @@ describe('UI Components', () => {
     expect(value).toBe('3');
   });
 
+  it('Select supports size="sm" prop and adds sm class to trigger', () => {
+    root = createRoot(container!);
+    act(() => {
+      root.render(
+        <Select
+          label="Compact Select"
+          value="1"
+          size="sm"
+          options={[{ value: '1', label: 'Item 1' }]}
+        />
+      );
+    });
+
+    const trigger = container!.querySelector('.ui-select-trigger');
+    expect(trigger?.classList.contains('sm')).toBe(true);
+  });
+
   it('Checkbox renders and toggles state', () => {
     let checked = false;
     const handleChange = vi.fn((e) => {
