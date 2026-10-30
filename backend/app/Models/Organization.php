@@ -13,6 +13,12 @@ class Organization extends Model
 
     protected $fillable = [
         'name',
+        'working_days',
+        'addons',
+    ];
+
+    protected $casts = [
+        'addons' => 'array',
     ];
 
     /**
@@ -39,5 +45,29 @@ class Organization extends Model
     public function stockLogs(): HasMany
     {
         return $this->hasMany(StockLog::class);
+    }
+
+    /**
+     * Projects belonging to this organization.
+     */
+    public function projects(): HasMany
+    {
+        return $this->hasMany(Project::class);
+    }
+
+    /**
+     * Tasks belonging to this organization.
+     */
+    public function tasks(): HasMany
+    {
+        return $this->hasMany(Task::class);
+    }
+
+    /**
+     * Calendar holidays belonging to this organization.
+     */
+    public function calendarHolidays(): HasMany
+    {
+        return $this->hasMany(CalendarHoliday::class);
     }
 }

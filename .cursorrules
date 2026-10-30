@@ -1,31 +1,35 @@
 # Worknity Agent Instructions & Rules
 
-You must strictly adhere to the development rules defined in the `.agent/rules/` directory when performing tasks in this workspace:
+You must strictly adhere to the development rules and skills defined in the `.agents/` directory when performing tasks in this workspace:
 
-1. **General Development Rules**: See [.agent/rules/01_general.md](file:///home/ubuntu/worknity/.agent/rules/01_general.md)
-   - Adhere to design documents first.
+1. **General Development Rules**: See [.agents/rules/general.md](file:///home/ubuntu/worknity/.agents/rules/general.md)
+   - Adhere to design documents first (`_doc/`).
    - No lazy workarounds, temporary placeholders, or raw TODOs.
    - Do not add arbitrary dependencies without user permission.
 
-2. **Backend & Database Rules**: See [.agent/rules/02_backend.md](file:///home/ubuntu/worknity/.agent/rules/02_backend.md)
-   - Strict multi-tenant isolation (always use global scopes for `company_id` and compound indexes).
+2. **Backend & Database Rules**: See [.agents/rules/backend.md](file:///home/ubuntu/worknity/.agents/rules/backend.md)
+   - Strict multi-tenant isolation (always use global scopes for `organization_id` / `company_id` and compound indexes).
    - Use `404 Not Found` for unauthorized tenant data access to hide existence.
    - Database transactions and pessimistic locking (`lockForUpdate()`) for stock modifications.
    - Use JSON columns (`attributes`) for flexible stock properties rather than adding custom physical columns.
 
-3. **Frontend Rules**: See [.agent/rules/03_frontend.md](file:///home/ubuntu/worknity/.agent/rules/03_frontend.md)
+3. **Frontend Rules**: See [.agents/rules/frontend.md](file:///home/ubuntu/worknity/.agents/rules/frontend.md)
    - No implicit `any` (strict TypeScript typing).
    - Pair optimistic UI updates with proper error handling and rollbacks.
    - Store JWT in memory only (no localStorage), use secure cookies for refresh.
    - Use Vanilla CSS for premium web design system and micro-animations.
 
-4. **MCP & AI Integration Rules**: See [.agent/rules/04_mcp.md](file:///home/ubuntu/worknity/.agent/rules/04_mcp.md)
+4. **MCP & AI Integration Rules**: See [.agents/rules/mcp.md](file:///home/ubuntu/worknity/.agents/rules/mcp.md)
    - Human-in-the-loop (always require user approval before writing DB updates from AI tools).
    - Keep MCP endpoints separate and secure.
 
-5. **Testing Rules**: See [.agent/rules/05_testing.md](file:///home/ubuntu/worknity/.agent/rules/05_testing.md)
+5. **Testing Rules**: See [.agents/rules/testing.md](file:///home/ubuntu/worknity/.agents/rules/testing.md)
    - Writing tests is mandatory for new features, major API endpoints, and bug fixes.
    - Always run and pass relevant tests before confirming code changes.
+
+6. **Workspace Skills**:
+   - **Program Modification & Development**: See [.agents/skills/worknity-dev/SKILL.md](file:///home/ubuntu/worknity/.agents/skills/worknity-dev/SKILL.md)
+   - **Design Document Synchronization**: See [.agents/skills/doc-sync/SKILL.md](file:///home/ubuntu/worknity/.agents/skills/doc-sync/SKILL.md)
 
 ---
 Read these files carefully before generating any design plan or writing code.

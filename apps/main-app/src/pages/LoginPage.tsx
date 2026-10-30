@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { Input } from '../components/ui/Input';
+import { StockIcon, CustomerIcon, KeyIcon, TrendingUpIcon } from '../components/ui/Icons';
 
 export const LoginPage: React.FC = () => {
   const { login, register, loginPasskey, startSocialLogin } = useAuth();
@@ -140,7 +141,7 @@ export const LoginPage: React.FC = () => {
               disabled={loading}
               style={{ width: '100%', display: 'flex', gap: '0.5rem', justifyContent: 'center', marginTop: '-0.5rem' }}
             >
-              🔑 パスキーでログイン (指紋・顔認証)
+              パスキーでログイン (指紋・顔認証)
             </button>
           )}
 
@@ -156,7 +157,7 @@ export const LoginPage: React.FC = () => {
           </div>
 
           <div className="social-note">
-            💡 【開発用モック】ボタンをクリックすると、ダミー連携アカウントからデモ組織が即座に自動生成されログインします。
+            【開発用モック】ボタンをクリックすると、ダミー連携アカウントからデモ組織が即座に自動生成されログインします。
           </div>
 
           <div style={{ textAlign: 'center', marginTop: '0.5rem' }}>
@@ -188,7 +189,9 @@ export const LoginPage: React.FC = () => {
           
           <div className="promo-features">
             <div className="promo-feature-item">
-              <div className="promo-feature-icon">📦</div>
+              <div className="promo-feature-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <StockIcon size={24} />
+              </div>
               <div className="promo-feature-text">
                 <h4>超シンプルな在庫管理</h4>
                 <p>1クリックでの入出庫や棚卸。PC操作が苦手なスタッフでも直感的に使いこなせる画面設計です。</p>
@@ -196,7 +199,9 @@ export const LoginPage: React.FC = () => {
             </div>
 
             <div className="promo-feature-item">
-              <div className="promo-feature-icon">👥</div>
+              <div className="promo-feature-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <CustomerIcon size={24} />
+              </div>
               <div className="promo-feature-text">
                 <h4>複数人でのリアルタイム共有</h4>
                 <p>組織ごとのマルチテナント管理により、複数拠点やチーム間でのリアルタイムな情報共有が即座に行えます。</p>
@@ -204,7 +209,9 @@ export const LoginPage: React.FC = () => {
             </div>
 
             <div className="promo-feature-item">
-              <div className="promo-feature-icon">🔑</div>
+              <div className="promo-feature-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <KeyIcon size={24} />
+              </div>
               <div className="promo-feature-text">
                 <h4>パスキー（生体認証）対応</h4>
                 <p>指紋や顔認証で安全・簡単にサインイン。面倒なパスワードを覚える必要はありません。</p>
@@ -212,7 +219,9 @@ export const LoginPage: React.FC = () => {
             </div>
 
             <div className="promo-feature-item">
-              <div className="promo-feature-icon">📈</div>
+              <div className="promo-feature-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <TrendingUpIcon size={24} />
+              </div>
               <div className="promo-feature-text">
                 <h4>自動で履歴をグラフ化</h4>
                 <p>過去7日間の推移を美しいスパークラインで可視化。在庫の動きをひと目で把握できます。</p>

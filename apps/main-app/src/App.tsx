@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { SocialCallbackPage } from './pages/SocialCallbackPage';
+import { CatalogKioskPage } from './pages/CatalogKioskPage';
 
 const AppContent: React.FC = () => {
   const { user, loading } = useAuth();
@@ -29,6 +30,10 @@ const AppContent: React.FC = () => {
   // Simple client-side router based on URL pathname
   if (window.location.pathname === '/social-callback') {
     return <SocialCallbackPage />;
+  }
+
+  if (window.location.pathname === '/catalog') {
+    return <CatalogKioskPage />;
   }
 
   if (!user) {

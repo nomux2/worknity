@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 import {
   decodeAttestationOptions,
   encodeAttestationCredential,
@@ -26,6 +26,7 @@ interface AuthContextType {
   user: UserDetails | null;
   accessToken: string | null;
   loading: boolean;
+  addons: string[];
   login: (loginId: string, password: string) => Promise<void>;
   register: (email: string, loginId: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -36,6 +37,8 @@ interface AuthContextType {
   startSocialLogin: (provider: string) => Promise<{ redirect_url: string; is_mock: boolean; message: string }>;
   fetchWithAuth: (url: string, options?: RequestInit) => Promise<Response>;
   setAuthToken: (token: string) => Promise<void>;
+  fetchAddons: () => Promise<void>;
+  toggleAddon: (addonId: string, enabled: boolean) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -44,6 +47,83 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [user, setUser] = useState<UserDetails | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [addons, setAddons] = useState<string[]>([]);
+
+  // Auth fetch wrapper that automatically attaches the JWT Bearer token
+  const fetchWithAuth = useCallback(async (url: string, options: RequestInit = {}): Promise<Response> => {
+    let currentToken = accessToken;
+ 
+    const headers = new Headers(options.headers || {});
+    if (currentToken) {
+      headers.set('Authorization', `Bearer ${currentToken}`);
+    }
+    headers.set('Accept', 'application/json');
+    if (!(options.body instanceof FormData) && !headers.has('Content-Type')) {
+      headers.set('Content-Type', 'application/json');
+    }
+ 
+    let res = await fetch(url, { ...options, headers });
+ 
+    // Handle token expiration by attempting refresh once
+    if (res.status === 401 && !url.includes('/auth/refresh') && !url.includes('/auth/login') && !url.includes('/auth/register')) {
+      try {
+        const refreshedToken = await performSilentRefresh();
+        if (refreshedToken) {
+          headers.set('Authorization', `Bearer ${refreshedToken}`);
+          res = await fetch(url, { ...options, headers });
+        }
+      } catch (err) {
+        setUser(null);
+        setAccessToken(null);
+      }
+    }
+ 
+    return res;
+  }, [accessToken]);
+
+  const fetchAddons = useCallback(async () => {
+    try {
+      const res = await fetchWithAuth('/api/settings/addons');
+      if (res.ok) {
+        const data = await res.json();
+        setAddons(data.addons || []);
+      }
+    } catch (e) {
+      console.error('Failed to fetch addons:', e);
+    }
+  }, [fetchWithAuth]);
+
+  const toggleAddon = async (addonId: string, enabled: boolean) => {
+    let newAddons = [...addons];
+    if (enabled) {
+      if (!newAddons.includes(addonId)) {
+        newAddons.push(addonId);
+      }
+    } else {
+      newAddons = newAddons.filter(a => a !== addonId);
+    }
+
+    const res = await fetchWithAuth('/api/settings/addons', {
+      method: 'PUT',
+      body: JSON.stringify({ addons: newAddons })
+    });
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.message || 'アドオン設定の更新に失敗しました。');
+    }
+
+    const data = await res.json();
+    setAddons(data.addons || []);
+  };
+
+  useEffect(() => {
+    if (accessToken && user) {
+      fetchAddons();
+    } else {
+      setAddons([]);
+    }
+  }, [accessToken, user, fetchAddons]);
 
   // Perform silent refresh using HttpOnly cookie
   const performSilentRefresh = async (): Promise<string | null> => {
@@ -103,38 +183,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return () => clearInterval(interval);
   }, [accessToken]);
 
-  // Auth fetch wrapper that automatically attaches the JWT Bearer token
-  const fetchWithAuth = async (url: string, options: RequestInit = {}): Promise<Response> => {
-    let currentToken = accessToken;
-
-    const headers = new Headers(options.headers || {});
-    if (currentToken) {
-      headers.set('Authorization', `Bearer ${currentToken}`);
-    }
-    headers.set('Accept', 'application/json');
-    if (!(options.body instanceof FormData) && !headers.has('Content-Type')) {
-      headers.set('Content-Type', 'application/json');
-    }
-
-    let res = await fetch(url, { ...options, headers });
-
-    // Handle token expiration by attempting refresh once
-    if (res.status === 401 && !url.includes('/auth/refresh') && !url.includes('/auth/login') && !url.includes('/auth/register')) {
-      try {
-        const refreshedToken = await performSilentRefresh();
-        if (refreshedToken) {
-          headers.set('Authorization', `Bearer ${refreshedToken}`);
-          res = await fetch(url, { ...options, headers });
-        }
-      } catch (err) {
-        setUser(null);
-        setAccessToken(null);
-      }
-    }
-
-    return res;
-  };
-
   const login = async (loginId: string, password: string) => {
     const res = await fetch('/api/auth/login', {
       method: 'POST',
@@ -145,8 +193,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       body: JSON.stringify({ login_id: loginId, password })
     });
     if (!res.ok) {
-      const errData = await res.json();
-      throw new Error(errData.message || 'ログインに失敗しました。');
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.message || `ログインに失敗しました (${res.status})。`);
     }
     const data = await res.json();
     setAccessToken(data.access_token);
@@ -163,8 +211,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       body: JSON.stringify({ email, login_id: loginId, password })
     });
     if (!res.ok) {
-      const errData = await res.json();
-      throw new Error(errData.message || '新規登録に失敗しました。');
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.message || `新規登録に失敗しました (${res.status})。`);
     }
     const data = await res.json();
     setAccessToken(data.access_token);
@@ -186,7 +234,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       body: JSON.stringify({ organization_id: orgId })
     });
     if (!res.ok) {
-      const errData = await res.json();
+      const errData = await res.json().catch(() => ({}));
       throw new Error(errData.message || '組織の切り替えに失敗しました。');
     }
     const data = await res.json();
@@ -200,7 +248,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       body: JSON.stringify({ organization_name: orgName })
     });
     if (!res.ok) {
-      const errData = await res.json();
+      const errData = await res.json().catch(() => ({}));
       throw new Error(errData.message || 'セットアップに失敗しました。');
     }
     const data = await res.json();
@@ -334,6 +382,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       user,
       accessToken,
       loading,
+      addons,
       login,
       register,
       logout,
@@ -343,7 +392,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       loginPasskey,
       startSocialLogin,
       fetchWithAuth,
-      setAuthToken
+      setAuthToken,
+      fetchAddons,
+      toggleAddon
     }}>
       {children}
     </AuthContext.Provider>

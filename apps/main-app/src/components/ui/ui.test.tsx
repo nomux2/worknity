@@ -12,6 +12,7 @@ import { Switch } from './Switch';
 import { NumberInput } from './NumberInput';
 import { DatePicker } from './DatePicker';
 import { TimePicker } from './TimePicker';
+import { Combobox } from './Combobox';
 
 describe('UI Components', () => {
   let container: HTMLDivElement | null = null;
@@ -387,4 +388,77 @@ describe('UI Components', () => {
 
     expect(input.value).toBe('14:45');
   });
+
+  it('Combobox renders, displays label, handles typing and selection', () => {
+    let val = '';
+    const handleChange = vi.fn((v) => {
+      val = v;
+    });
+
+    const options = [
+      { value: 'proj-1', label: 'Project Alpha' },
+      { value: 'proj-2', label: 'Project Beta' },
+      { value: 'proj-3', label: 'Project Gamma' },
+    ];
+
+    root = createRoot(container!);
+    act(() => {
+      root.render(
+        <Combobox
+          label="Select Project"
+          value={val}
+          onChange={handleChange}
+          options={options}
+          placeholder="Type to filter..."
+        />
+      );
+    });
+
+    const input = container!.querySelector('input') as HTMLInputElement;
+    expect(input).toBeTruthy();
+    expect(input.placeholder).toBe('Type to filter...');
+
+    // Trigger focus to open popover
+    act(() => {
+      input.focus();
+    });
+
+    // Check if dropdown contains options
+    const optionElements = container!.querySelectorAll('.ui-dropdown-option');
+    expect(optionElements.length).toBe(3);
+    expect(optionElements[0].textContent).toBe('Project Alpha');
+
+    // Simulate typing
+    act(() => {
+      setInputValue(input, 'Beta');
+    });
+
+    expect(handleChange).toHaveBeenCalledWith('Beta');
+
+    // Re-render with new value to simulate controlled component
+    act(() => {
+      root.render(
+        <Combobox
+          label="Select Project"
+          value="Beta"
+          onChange={handleChange}
+          options={options}
+        />
+      );
+    });
+
+    // Option list should be filtered (only Project Beta should remain)
+    const filteredOptions = container!.querySelectorAll('.ui-dropdown-option');
+    expect(filteredOptions.length).toBe(1);
+    expect(filteredOptions[0].textContent).toBe('Project Beta');
+
+    // Click to select the option
+    act(() => {
+      (filteredOptions[0] as HTMLElement).click();
+    });
+
+    // Selection should trigger onChange with the option label
+    expect(handleChange).toHaveBeenLastCalledWith('Project Beta');
+  });
 });
+

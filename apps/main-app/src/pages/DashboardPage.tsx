@@ -1,9 +1,39 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { Input } from '../components/ui/Input';
-import { NumberInput } from '../components/ui/NumberInput';
 import { Switch } from '../components/ui/Switch';
+import { InventoryManagement } from '../components/InventoryManagement';
+import { AttendanceManagement } from '../components/AttendanceManagement';
+import { MemberManagement } from '../components/MemberManagement';
+import { MasterManagement } from '../components/MasterManagement';
+import { CustomerRegistry } from '../components/CustomerRegistry';
+import { ProjectManagement } from '../components/ProjectManagement';
+import { TaskManagement } from '../components/TaskManagement';
+import { OrderBoardPage } from './OrderBoardPage';
+import { CatalogManagementPage } from './CatalogManagementPage';
+import { PurchaseOrderManagement } from '../components/PurchaseOrderManagement';
+import { WorkflowManagement } from '../components/WorkflowManagement';
+import { WorkflowSettings } from '../components/WorkflowSettings';
+import { 
+  PortalIcon, 
+  StockIcon, 
+  AttendanceIcon, 
+  BillingIcon, 
+  CustomerIcon, 
+  ProjectIcon, 
+  TaskIcon, 
+  MemberIcon, 
+  MasterIcon, 
+  OrderIcon, 
+  CatalogIcon, 
+  PurchaseIcon, 
+  WorkflowIcon, 
+  SettingIcon,
+  SuccessIcon,
+  ErrorIcon,
+  WarningIcon 
+} from '../components/ui/Icons';
 
 interface StockItem {
   id: number;
@@ -32,12 +62,40 @@ export const DashboardPage: React.FC = () => {
     switchOrg, 
     setupOrg, 
     registerPasskey, 
-    fetchWithAuth 
+    fetchWithAuth,
+    addons,
+    toggleAddon
   } = useAuth();
 
   // Portal & navigation states
-  const [activeTab, setActiveTab] = useState<'portal' | 'stocks' | 'attendance' | 'billing'>('portal');
+  const [activeTab, setActiveTab] = useState<'portal' | 'stocks' | 'attendance' | 'billing' | 'members' | 'masters' | 'customers' | 'projects' | 'tasks' | 'orders' | 'catalog_edit' | 'purchase_orders' | 'workflows' | 'workflow_settings'>('portal');
   const [isLauncherOpen, setIsLauncherOpen] = useState<boolean>(false);
+  const [showAddonPanel, setShowAddonPanel] = useState<boolean>(false);
+
+  const handleToggleAddon = async (addonId: string, enabled: boolean) => {
+    try {
+      await toggleAddon(addonId, enabled);
+      addToast(enabled ? 'アドオンを有効化しました。' : 'アドオンを無効化しました。');
+    } catch (err: any) {
+      addToast(err.message || 'アドオン設定の更新に失敗しました。', 'error');
+    }
+  };
+
+  // User profile dropdown states
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState<boolean>(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setIsUserMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
   const [isOnDuty, setIsOnDuty] = useState<boolean>(false);
   const [clockInTime, setClockInTime] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState<string>('');
@@ -53,31 +111,12 @@ export const DashboardPage: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Stocks and filtering states
+  // Stocks state for portal health calculations
   const [stocks, setStocks] = useState<StockItem[]>([]);
-  const [keyword, setKeyword] = useState<string>('');
-  const [loadingStocks, setLoadingStocks] = useState<boolean>(true);
   
   // Setup organization name state
   const [newOrgName, setNewOrgName] = useState<string>('');
   const [submittingOrg, setSubmittingOrg] = useState<boolean>(false);
-
-  // New stock item modal states
-  const [showAddModal, setShowAddModal] = useState<boolean>(false);
-  const [newProductName, setNewProductName] = useState<string>('');
-  const [newProductCode, setNewProductCode] = useState<string>('');
-  const [newQuantity, setNewQuantity] = useState<number>(0);
-  const [newMinQuantity, setNewMinQuantity] = useState<number>(0);
-  const [submittingStock, setSubmittingStock] = useState<boolean>(false);
-
-  // Expand row states for inline operations
-  const [expandedStockId, setExpandedStockId] = useState<number | null>(null);
-  const toggleExpandRow = (id: number) => {
-    setExpandedStockId(prev => prev === id ? null : id);
-  };
-  const [opInflowQty, setOpInflowQty] = useState<string>('');
-  const [opOutflowQty, setOpOutflowQty] = useState<string>('');
-  const [opStocktakeQty, setOpStocktakeQty] = useState<string>('');
 
   // Passkey state
   const [passkeyAlias, setPasskeyAlias] = useState<string>('');
@@ -86,38 +125,55 @@ export const DashboardPage: React.FC = () => {
 
   // Toast system
   const [toasts, setToasts] = useState<Toast[]>([]);
-  const addToast = (message: string, type: 'success' | 'error' | 'warning' = 'success') => {
+  const addToast = useCallback((message: string, type: 'success' | 'error' | 'warning' = 'success') => {
     const id = Math.random().toString(36).substring(2, 9);
     setToasts(prev => [...prev, { id, message, type }]);
     setTimeout(() => {
       setToasts(prev => prev.filter(t => t.id !== id));
     }, 3000);
-  };
+  }, []);
 
-  // Fetch stocks with optional search keyword
-  const fetchStocks = async (searchKeyword = '') => {
+  // Fetch stocks for portal metrics summary
+  const fetchStocks = async () => {
     try {
-      const res = await fetchWithAuth(`/api/stocks?keyword=${encodeURIComponent(searchKeyword)}`);
+      const res = await fetchWithAuth('/api/stocks');
       if (res.ok) {
         const payload = await res.json();
         setStocks(payload.data || []);
       }
     } catch (e) {
       console.error(e);
-      addToast('在庫データの取得に失敗しました。', 'error');
-    } finally {
-      setLoadingStocks(false);
     }
   };
 
-  // Debounced search trigger
+  const fetchTodayStatus = useCallback(async () => {
+    try {
+      const now = new Date();
+      const y = now.getFullYear();
+      const m = String(now.getMonth() + 1).padStart(2, '0');
+      const res = await fetchWithAuth(`/api/attendances?month=${y}-${m}`);
+      if (res.ok) {
+        const payload = await res.json();
+        const activeRec = (payload.data || []).find((r: any) => r.user_id === user?.id && r.status === 'working');
+        if (activeRec) {
+          setIsOnDuty(true);
+          setClockInTime(activeRec.formatted_clock_in || new Date(activeRec.clock_in).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }));
+        } else {
+          setIsOnDuty(false);
+          setClockInTime(null);
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }, [user?.id, fetchWithAuth]);
+
   useEffect(() => {
-    setLoadingStocks(true);
-    const delay = setTimeout(() => {
-      fetchStocks(keyword);
-    }, 300);
-    return () => clearTimeout(delay);
-  }, [keyword, user?.organization_id]);
+    if (user?.organization_id) {
+      fetchStocks();
+      fetchTodayStatus();
+    }
+  }, [user?.organization_id, activeTab, fetchTodayStatus]);
 
   // Handle Organization setup
   const handleSetupOrg = async (e: React.FormEvent) => {
@@ -131,126 +187,6 @@ export const DashboardPage: React.FC = () => {
       addToast(err.message || '組織名の登録に失敗しました。', 'error');
     } finally {
       setSubmittingOrg(false);
-    }
-  };
-
-  // Handle Add New Stock Item
-  const handleAddStock = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newProductName.trim()) return;
-    setSubmittingStock(true);
-
-    try {
-      const res = await fetchWithAuth('/api/stocks', {
-        method: 'POST',
-        body: JSON.stringify({
-          product_name: newProductName,
-          quantity: newQuantity,
-          minimum_quantity: newMinQuantity,
-          attributes: newProductCode ? { code: newProductCode } : null
-        })
-      });
-
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.message || '商品登録に失敗しました。');
-      }
-
-      const newStock = await res.json();
-      setStocks(prev => [newStock, ...prev]);
-      addToast(`「${newProductName}」を新規登録しました。`);
-      
-      // Reset form
-      setNewProductName('');
-      setNewProductCode('');
-      setNewQuantity(0);
-      setNewMinQuantity(0);
-      setShowAddModal(false);
-    } catch (err: any) {
-      addToast(err.message || '商品の登録に失敗しました。', 'error');
-    } finally {
-      setSubmittingStock(false);
-    }
-  };
-
-  // Perform Optimistic stock operation (inflow, outflow, stocktake)
-  const handleStockOperation = async (stockId: number, type: 'inflow' | 'outflow' | 'stocktake') => {
-    let inputVal = '';
-    if (type === 'inflow') inputVal = opInflowQty;
-    if (type === 'outflow') inputVal = opOutflowQty;
-    if (type === 'stocktake') inputVal = opStocktakeQty;
-
-    const amount = parseInt(inputVal, 10);
-    if (isNaN(amount) || amount < 0 || (type !== 'stocktake' && amount <= 0)) {
-      addToast('有効な数量を入力してください。', 'warning');
-      return;
-    }
-
-    const targetStock = stocks.find(s => s.id === stockId);
-    if (!targetStock) return;
-
-    // Outflow safeguard validation
-    if (type === 'outflow' && targetStock.quantity < amount) {
-      addToast('出庫数が現在の在庫数を超えています。', 'warning');
-      return;
-    }
-
-    // Save old state for rollback
-    const originalStocks = [...stocks];
-
-    // Calculate optimistic new quantity
-    let optimisticQuantity = targetStock.quantity;
-    if (type === 'inflow') optimisticQuantity += amount;
-    if (type === 'outflow') optimisticQuantity = Math.max(0, optimisticQuantity - amount);
-    if (type === 'stocktake') optimisticQuantity = amount;
-
-    // Optimistically update UI
-    setStocks(prev => prev.map(s => {
-      if (s.id === stockId) {
-        // Prepare new sparkline log optimistically
-        const updatedRecent = [...s.recent_quantities];
-        if (updatedRecent.length >= 7) {
-          updatedRecent.shift();
-        }
-        updatedRecent.push(optimisticQuantity);
-        
-        return { 
-          ...s, 
-          quantity: optimisticQuantity,
-          recent_quantities: updatedRecent
-        };
-      }
-      return s;
-    }));
-
-    // Reset operations inputs
-    setOpInflowQty('');
-    setOpOutflowQty('');
-    setOpStocktakeQty('');
-
-    // Call API in background
-    try {
-      const url = `/api/stocks/${stockId}/${type === 'stocktake' ? 'stocktake' : type}`;
-      const method = type === 'stocktake' ? 'PUT' : 'POST';
-      const body = JSON.stringify({ quantity: amount });
-
-      const res = await fetchWithAuth(url, { method, body });
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.message || '操作に失敗しました。');
-      }
-
-      const updatedStock = await res.json();
-      // Replace with actual server response (which includes final logs/calculations)
-      setStocks(prev => prev.map(s => s.id === stockId ? updatedStock : s));
-      
-      const opMsg = type === 'inflow' ? '入庫' : type === 'outflow' ? '出庫' : '棚卸';
-      addToast(`「${targetStock.product_name}」の${opMsg}処理が完了しました。`);
-    } catch (err: any) {
-      console.error(err);
-      // Rollback to original state on failure
-      setStocks(originalStocks);
-      addToast(err.message || '在庫操作中にエラーが発生しました。変更をロールバックしました。', 'error');
     }
   };
 
@@ -270,53 +206,6 @@ export const DashboardPage: React.FC = () => {
     } finally {
       setRegisteringPasskey(false);
     }
-  };
-
-  // Sparkline SVG generator
-  const renderSparkline = (quantities: number[]) => {
-    if (!quantities || quantities.length === 0) {
-      return <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>記録なし</span>;
-    }
-    
-    // Reverse because backend returns latest first, and we want oldest -> newest (left -> right)
-    // Actually, backend: logs()->latest('id')->limit(7)->get()->reverse()->pluck('new_quantity')
-    // Wait, the backend already does `reverse()`, so it is already oldest to newest (chronological)!
-    // Let's verify: `logs()->latest('id')->limit(7)` gets latest 7 (e.g. log 10, 9, 8, 7, 6, 5, 4).
-    // Then `->get()->reverse()` reverses it to (log 4, 5, 6, 7, 8, 9, 10), which is oldest to newest!
-    // So the quantities array is already oldest to newest. We don't need to reverse it again.
-    const qArray = quantities;
-    const minVal = Math.min(...qArray);
-    const maxVal = Math.max(...qArray);
-    const range = maxVal - minVal === 0 ? 1 : maxVal - minVal;
-    
-    const width = 100;
-    const height = 30;
-    const padding = 3;
-    
-    const points = qArray.map((val, idx) => {
-      const x = qArray.length === 1 
-        ? width / 2 
-        : (idx / (qArray.length - 1)) * (width - padding * 2) + padding;
-      const y = height - ((val - minVal) / range) * (height - padding * 2) - padding;
-      return `${x},${y}`;
-    });
-
-    const pathD = qArray.length === 1 
-      ? `M ${padding},${height/2} L ${width - padding},${height/2}`
-      : `M ${points.join(' L ')}`;
-
-    return (
-      <div className="sparkline-container" title={`履歴: ${qArray.join(' → ')}`}>
-        <svg className="sparkline-svg" viewBox={`0 0 ${width} ${height}`}>
-          <path className="sparkline-glow" d={pathD} />
-          <path className="sparkline-path" d={pathD} />
-          {qArray.length > 1 && points.map((pt, idx) => {
-            const [x, y] = pt.split(',');
-            return <circle key={idx} cx={x} cy={y} r="2.5" className="sparkline-dots" />;
-          })}
-        </svg>
-      </div>
-    );
   };
 
   // Render initial setup wizard if organization name is empty
@@ -372,7 +261,9 @@ export const DashboardPage: React.FC = () => {
       <div className="toast-container">
         {toasts.map(toast => (
           <div key={toast.id} className={`toast toast-${toast.type}`}>
-            <span>{toast.type === 'success' ? '✅' : toast.type === 'error' ? '❌' : '⚠️'}</span>
+            <span style={{ display: 'flex', alignItems: 'center' }}>
+              {toast.type === 'success' ? <SuccessIcon size={16} /> : toast.type === 'error' ? <ErrorIcon size={16} /> : <WarningIcon size={16} />}
+            </span>
             <div>{toast.message}</div>
           </div>
         ))}
@@ -393,33 +284,117 @@ export const DashboardPage: React.FC = () => {
               className={`nav-tab-item ${activeTab === 'portal' ? 'active' : ''}`}
               onClick={() => setActiveTab('portal')}
             >
-              <span className="nav-tab-icon">🏠</span>
-              <span className="nav-tab-label">ポータル</span>
+              <PortalIcon />
+              <span>ポータル</span>
             </button>
             <button 
               type="button" 
               className={`nav-tab-item ${activeTab === 'stocks' ? 'active' : ''}`}
               onClick={() => setActiveTab('stocks')}
             >
-              <span className="nav-tab-icon">📦</span>
-              <span className="nav-tab-label">在庫管理</span>
+              <StockIcon />
+              <span>在庫</span>
             </button>
             <button 
               type="button" 
               className={`nav-tab-item ${activeTab === 'attendance' ? 'active' : ''}`}
               onClick={() => setActiveTab('attendance')}
             >
-              <span className="nav-tab-icon">👥</span>
-              <span className="nav-tab-label">勤怠管理</span>
+              <AttendanceIcon />
+              <span>勤怠</span>
             </button>
             <button 
               type="button" 
               className={`nav-tab-item ${activeTab === 'billing' ? 'active' : ''}`}
               onClick={() => setActiveTab('billing')}
             >
-              <span className="nav-tab-icon">📄</span>
-              <span className="nav-tab-label">売上管理</span>
+              <BillingIcon />
+              <span>売上</span>
             </button>
+            <button 
+              type="button" 
+              className={`nav-tab-item ${activeTab === 'customers' ? 'active' : ''}`}
+              onClick={() => setActiveTab('customers')}
+            >
+              <CustomerIcon />
+              <span>顧客</span>
+            </button>
+            <button 
+              type="button" 
+              className={`nav-tab-item ${activeTab === 'projects' ? 'active' : ''}`}
+              onClick={() => setActiveTab('projects')}
+            >
+              <ProjectIcon />
+              <span>プロジェクト</span>
+            </button>
+            <button 
+              type="button" 
+              className={`nav-tab-item ${activeTab === 'tasks' ? 'active' : ''}`}
+              onClick={() => setActiveTab('tasks')}
+            >
+              <TaskIcon />
+              <span>タスク</span>
+            </button>
+            <button 
+              type="button" 
+              className={`nav-tab-item ${activeTab === 'members' ? 'active' : ''}`}
+              onClick={() => setActiveTab('members')}
+            >
+              <MemberIcon />
+              <span>メンバー</span>
+            </button>
+            <button 
+              type="button" 
+              className={`nav-tab-item ${activeTab === 'masters' ? 'active' : ''}`}
+              onClick={() => setActiveTab('masters')}
+            >
+              <MasterIcon />
+              <span>管理</span>
+            </button>
+            <button 
+              type="button" 
+              className={`nav-tab-item ${activeTab === 'orders' ? 'active' : ''}`}
+              onClick={() => setActiveTab('orders')}
+            >
+              <OrderIcon />
+              <span>注文管理</span>
+            </button>
+            <button 
+              type="button" 
+              className={`nav-tab-item ${activeTab === 'catalog_edit' ? 'active' : ''}`}
+              onClick={() => setActiveTab('catalog_edit')}
+            >
+              <CatalogIcon />
+              <span>メニュー</span>
+            </button>
+            {addons.includes('purchase_order') && (
+              <button 
+                type="button" 
+                className={`nav-tab-item ${activeTab === 'purchase_orders' ? 'active' : ''}`}
+                onClick={() => setActiveTab('purchase_orders')}
+              >
+                <PurchaseIcon />
+                <span>発注</span>
+              </button>
+            )}
+            <button 
+              type="button" 
+              className={`nav-tab-item ${activeTab === 'workflows' ? 'active' : ''}`}
+              onClick={() => setActiveTab('workflows')}
+            >
+              <WorkflowIcon />
+              <span>申請・報告</span>
+            </button>
+            {user?.role === 'admin' && (
+              <button 
+                type="button" 
+                className={`nav-tab-item ${activeTab === 'workflow_settings' ? 'active' : ''}`}
+                onClick={() => setActiveTab('workflow_settings')}
+              >
+                <SettingIcon />
+                <span>申請設定</span>
+              </button>
+            )}
           </nav>
 
           {/* Mobile Fallback Navigation (Quick Launcher & Current Title) */}
@@ -440,55 +415,116 @@ export const DashboardPage: React.FC = () => {
               title="ポータルホーム"
               aria-label="ポータルホームへ"
             >
-              🏠
+              <PortalIcon size={18} />
             </button>
             <span style={{ color: 'var(--text-muted)', margin: '0 0.25rem' }}>|</span>
             <span style={{ fontWeight: 600, fontSize: '0.95rem', color: 'var(--text-main)' }}>
-              {activeTab === 'portal' && '🏠 ポータル'}
-              {activeTab === 'stocks' && '📦 在庫'}
-              {activeTab === 'attendance' && '👥 勤怠'}
-              {activeTab === 'billing' && '📄 売上'}
+              {activeTab === 'portal' && 'ポータル'}
+              {activeTab === 'stocks' && '在庫'}
+              {activeTab === 'attendance' && '勤怠'}
+              {activeTab === 'billing' && '売上'}
+              {activeTab === 'members' && 'メンバー'}
+              {activeTab === 'masters' && '管理'}
+              {activeTab === 'customers' && '顧客'}
+              {activeTab === 'orders' && '注文管理'}
+              {activeTab === 'catalog_edit' && 'メニュー'}
+              {activeTab === 'purchase_orders' && '発注'}
+              {activeTab === 'workflows' && '申請・報告'}
+              {activeTab === 'workflow_settings' && '申請設定'}
             </span>
           </div>
         </div>
         
         <div className="nav-actions">
-          {user && (
-            <div className="nav-user">
-              <span>🏢 組織:</span>
-              <select 
-                className="org-selector"
-                value={user.organization_id}
-                onChange={(e) => switchOrg(Number(e.target.value))}
-              >
-                {user.organizations.map(org => (
-                  <option key={org.id} value={org.id}>{org.name || '未セットアップ'}</option>
-                ))}
-              </select>
+          <div className="user-menu-container" ref={userMenuRef}>
+            <button 
+              type="button" 
+              className="user-menu-btn"
+              onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+              aria-label="ユーザーメニューを開く"
+            >
+              <img src="/icon/avatar.png" className="user-avatar" alt="アバター" onError={(e) => {
+                // Fallback to text initials if avatar.png is not found
+                (e.target as HTMLImageElement).style.display = 'none';
+                const parent = (e.target as HTMLImageElement).parentElement;
+                if (parent && !parent.querySelector('.user-avatar-fallback')) {
+                  const span = document.createElement('span');
+                  span.className = 'user-avatar-fallback';
+                  span.innerText = user?.login_id?.charAt(0).toUpperCase() || 'U';
+                  span.style.fontSize = '0.9rem';
+                  span.style.fontWeight = '700';
+                  span.style.color = 'var(--text-main)';
+                  parent.appendChild(span);
+                }
+              }} />
+            </button>
+            {isUserMenuOpen && (
+              <div className="user-menu-dropdown">
+                {user && (
+                  <>
+                    <div className="dropdown-info">
+                      <span className="dropdown-user-name">{user.login_id}</span>
+                      <span className="dropdown-user-role">{user.role === 'admin' ? '管理者' : 'スタッフ'}</span>
+                    </div>
+                    <div className="dropdown-divider"></div>
+                    <div className="dropdown-item org-select-item">
+                      <span>組織:</span>
+                      <select 
+                        className="org-selector"
+                        value={user.organization_id}
+                        onChange={(e) => {
+                          switchOrg(Number(e.target.value));
+                          setIsUserMenuOpen(false);
+                        }}
+                      >
+                        {user.organizations.map(org => (
+                          <option key={org.id} value={org.id}>{org.name || '未セットアップ'}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="dropdown-divider"></div>
+                  </>
+                )}
+                {user && user.role === 'admin' && (
+                  <button 
+                    type="button" 
+                    className="dropdown-item"
+                    onClick={() => {
+                      setShowAddonPanel(true);
+                      setIsUserMenuOpen(false);
+                    }}
+                  >
+                    アドオン管理
+                  </button>
+                )}
 
-              <span style={{ color: 'var(--text-muted)' }}>|</span>
-              
-              <span>👤 {user.login_id} ({user.role === 'admin' ? '管理者' : 'スタッフ'})</span>
-            </div>
-          )}
+                <button 
+                  type="button" 
+                  className="dropdown-item"
+                  onClick={() => {
+                    setShowSecurityPanel(!showSecurityPanel);
+                    setIsUserMenuOpen(false);
+                  }}
+                >
+                  セキュリティ設定
+                </button>
 
-          <button 
-            type="button" 
-            className="btn btn-secondary btn-sm"
-            onClick={() => setShowSecurityPanel(!showSecurityPanel)}
-          >
-            🔒 セキュリティ
-          </button>
+                <ThemeToggle className="dropdown-item" />
 
-          <ThemeToggle className="btn-sm" />
-
-          <button 
-            type="button" 
-            className="btn btn-text btn-sm"
-            onClick={logout}
-          >
-            ログアウト
-          </button>
+                <div className="dropdown-divider"></div>
+                <button 
+                  type="button" 
+                  className="dropdown-item logout-btn"
+                  onClick={() => {
+                    logout();
+                    setIsUserMenuOpen(false);
+                  }}
+                >
+                  ログアウト
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
@@ -498,7 +534,7 @@ export const DashboardPage: React.FC = () => {
         {showSecurityPanel && (
           <div className="section-card" style={{ animation: 'slideDown 0.2s ease-out' }}>
             <div className="section-header">
-              <h2>🔒 パスキーセキュリティ設定</h2>
+              <h2>パスキーセキュリティ設定</h2>
               <button className="btn btn-text btn-xs" onClick={() => setShowSecurityPanel(false)}>閉じる</button>
             </div>
             <div style={{ padding: '1.5rem' }}>
@@ -518,12 +554,52 @@ export const DashboardPage: React.FC = () => {
                   containerStyle={{ marginBottom: 0, flex: 1, minWidth: '200px' }}
                 />
                 <button type="submit" className="btn btn-primary" disabled={registeringPasskey}>
-                  {registeringPasskey ? '登録中...' : '🔑 パスキーを登録する'}
+                  {registeringPasskey ? '登録中...' : 'パスキーを登録する'}
                 </button>
               </form>
             </div>
           </div>
         )}
+
+      {/* Addons Management Modal */}
+      {showAddonPanel && (
+        <div className="modal-overlay" onClick={() => setShowAddonPanel(false)}>
+          <div className="modal-content" style={{ maxWidth: '450px' }} onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>アドオン管理 <span className="brand-dot"></span></h2>
+              <button type="button" className="close-btn" onClick={() => setShowAddonPanel(false)} aria-label="閉じる">×</button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', padding: '0.5rem 0' }}>
+              <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
+                組織で利用するアドオン機能を有効化・無効化できます。
+              </p>
+              
+              <div className="addon-card" style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '1rem',
+                borderRadius: '8px',
+                border: '1px solid var(--border-color)',
+                background: 'var(--bg-app)',
+                boxShadow: 'var(--shadow-sm)'
+              }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                  <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>仕入発注管理</span>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>仕入先への発注、注文書出力、分納入荷を管理します。</span>
+                </div>
+                <Switch 
+                  id="addon-purchase-order"
+                  checked={addons.includes('purchase_order')}
+                  onChange={(e) => {
+                    handleToggleAddon('purchase_order', e.target.checked);
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
         {/* Tab Module Views */}
         {activeTab === 'portal' && (
@@ -535,12 +611,12 @@ export const DashboardPage: React.FC = () => {
               {/* 1. 在庫管理 */}
               <div className="portal-card">
                 <div className="portal-card-header">
-                  <h3>📦 在庫管理</h3>
+                  <h3>在庫管理</h3>
                   <span className="portal-card-badge status-active">稼働中</span>
                 </div>
                 <div className="portal-card-content">
                   <div className="health-status-header" style={{ padding: 0 }}>
-                    <span>📊 在庫健全性: {healthPercentage}%</span>
+                    <span>在庫健全性: {healthPercentage}%</span>
                   </div>
                   <div className="health-bar-bg" style={{ margin: '0.5rem 0' }}>
                     <div 
@@ -566,7 +642,7 @@ export const DashboardPage: React.FC = () => {
               {/* 2. 勤怠管理 */}
               <div className="portal-card">
                 <div className="portal-card-header">
-                  <h3>👥 勤怠管理</h3>
+                  <h3>勤怠管理</h3>
                   <span className={`portal-card-badge ${isOnDuty ? 'status-active' : ''}`}>
                     {isOnDuty ? '勤務中' : '勤務外'}
                   </span>
@@ -579,16 +655,37 @@ export const DashboardPage: React.FC = () => {
                     <Switch
                       label={isOnDuty ? '勤務中 (打刻済み)' : '出勤する'}
                       checked={isOnDuty}
-                      onChange={(e) => {
+                      onChange={async (e) => {
                         const checked = e.target.checked;
-                        setIsOnDuty(checked);
                         if (checked) {
-                          const now = new Date();
-                          setClockInTime(now.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }));
-                          addToast('出勤打刻を完了しました。', 'success');
+                          try {
+                            const res = await fetchWithAuth('/api/attendances/clock-in', { method: 'POST' });
+                            const data = await res.json();
+                            if (res.ok) {
+                              setIsOnDuty(true);
+                              const now = new Date();
+                              setClockInTime(now.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }));
+                              addToast('出勤打刻を完了しました。', 'success');
+                            } else {
+                              addToast(data.message || '出勤打刻に失敗しました。', 'error');
+                            }
+                          } catch (e) {
+                            addToast('出勤打刻に失敗しました。', 'error');
+                          }
                         } else {
-                          setClockInTime(null);
-                          addToast('退勤打刻を完了しました。今日も一日お疲れ様でした！', 'success');
+                          try {
+                            const res = await fetchWithAuth('/api/attendances/clock-out', { method: 'POST' });
+                            const data = await res.json();
+                            if (res.ok) {
+                              setIsOnDuty(false);
+                              setClockInTime(null);
+                              addToast('退勤打刻を完了しました。今日も一日お疲れ様でした！', 'success');
+                            } else {
+                              addToast(data.message || '退勤打刻に失敗しました。', 'error');
+                            }
+                          } catch (e) {
+                            addToast('退勤打刻に失敗しました。', 'error');
+                          }
                         }
                       }}
                     />
@@ -613,7 +710,7 @@ export const DashboardPage: React.FC = () => {
               {/* 3. 請求・売上 */}
               <div className="portal-card">
                 <div className="portal-card-header">
-                  <h3>📄 請求・売上管理</h3>
+                  <h3>請求・売上管理</h3>
                   <span className="portal-card-badge">今期目標</span>
                 </div>
                 <div className="portal-card-content">
@@ -651,282 +748,67 @@ export const DashboardPage: React.FC = () => {
                   </button>
                 </div>
               </div>
+
+              {/* 4. プロジェクト */}
+              <div className="portal-card">
+                <div className="portal-card-header">
+                  <h3>プロジェクト管理</h3>
+                  <span className="portal-card-badge status-active">進行中</span>
+                </div>
+                <div className="portal-card-content">
+                  <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '0.5rem 0' }}>
+                    現場や案件ごとの進捗・消化工数をビジュアル表示。予算との乖離を防ぎます。
+                  </p>
+                </div>
+                <div className="portal-card-actions">
+                  <button 
+                    type="button" 
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => setActiveTab('projects')}
+                  >
+                    プロジェクト一覧を開く
+                  </button>
+                </div>
+              </div>
+
+              {/* 5. タスク */}
+              <div className="portal-card">
+                <div className="portal-card-header">
+                  <h3>日常タスク管理</h3>
+                  <span className="portal-card-badge status-active">カレンダー</span>
+                </div>
+                <div className="portal-card-content">
+                  <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '0.5rem 0' }}>
+                    定常作業や繰り返しタスクをカレンダーおよびカンバン形式で可視化。
+                  </p>
+                </div>
+                <div className="portal-card-actions">
+                  <button 
+                    type="button" 
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => setActiveTab('tasks')}
+                  >
+                    タスクカレンダーを開く
+                  </button>
+                </div>
+              </div>
+
             </div>
           </div>
         )}
 
         {activeTab === 'stocks' && (
-          <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden', gap: '1.5rem', animation: 'fadeIn 0.2s ease-out' }}>
-            {/* Metrics Row */}
-            <div className="metrics-grid">
-              <div className="metric-card metric-good">
-                <div className="metric-info">
-                  <h3>良好な商品数</h3>
-                  <div className="metric-value">{goodStocks}</div>
-                </div>
-                <div className="metric-icon-box">✓</div>
-              </div>
-
-              <div className="metric-card metric-warning">
-                <div className="metric-info">
-                  <h3>警告レベル (しきい値一致)</h3>
-                  <div className="metric-value">{warningStocks}</div>
-                </div>
-                <div className="metric-icon-box">!</div>
-              </div>
-
-              <div className="metric-card metric-alert">
-                <div className="metric-info">
-                  <h3>不足している商品数</h3>
-                  <div className="metric-value">{dangerStocks}</div>
-                </div>
-                <div className="metric-icon-box">✗</div>
-              </div>
-            </div>
-
-            {/* Health status bar */}
-            <div className="health-status-container">
-              <div className="health-status-header">
-                <span>📊 組織の在庫健全性</span>
-                <span className="health-percentage" style={{ color: healthColor }}>
-                  {healthPercentage}%
-                </span>
-              </div>
-              <div className="health-bar-bg">
-                <div 
-                  className="health-bar-fill" 
-                  style={{ 
-                    width: `${healthPercentage}%`,
-                    backgroundColor: healthColor
-                  }}
-                ></div>
-              </div>
-            </div>
-
-            {/* Search, Filter & Action Bar */}
-            <div className="section-card kiosk-main-card">
-              <div className="search-bar">
-                <div className="search-input-wrapper">
-                  <span className="search-icon">🔍</span>
-                  <input
-                    type="text"
-                    className="form-control search-input"
-                    placeholder="商品名で検索..."
-                    value={keyword}
-                    onChange={(e) => setKeyword(e.target.value)}
-                  />
-                </div>
-                <button 
-                  type="button" 
-                  className="btn btn-primary"
-                  onClick={() => setShowAddModal(true)}
-                >
-                  ＋ 在庫商品を新規登録
-                </button>
-              </div>
-
-              {/* Stocks Table */}
-              <div className="table-responsive">
-                {loadingStocks ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '4rem' }}>
-                    <div className="spinner"></div>
-                    <p style={{ marginTop: '1rem', color: 'var(--text-muted)' }}>読み込み中...</p>
-                  </div>
-                ) : stocks.length === 0 ? (
-                  <div className="empty-state">
-                    <div className="empty-state-icon">📦</div>
-                    <h3>登録されている商品がありません</h3>
-                    <p>「在庫商品を新規登録」ボタンから、商品を登録してください。</p>
-                  </div>
-                ) : (
-                  <table className="stock-table">
-                    <thead>
-                      <tr>
-                        <th>コード</th>
-                        <th>商品名</th>
-                        <th style={{ textAlign: 'right' }}>在庫数</th>
-                        <th style={{ textAlign: 'right' }}>安全しきい値</th>
-                        <th>ステータス</th>
-                        <th>過去7日間の推移</th>
-                        <th style={{ textAlign: 'center' }}>操作</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {stocks.map(stock => {
-                        const isGood = stock.quantity > stock.minimum_quantity;
-                        const isWarning = stock.quantity === stock.minimum_quantity;
-                        const statusClass = isGood 
-                          ? 'badge-good' 
-                          : isWarning 
-                            ? 'badge-warning' 
-                            : 'badge-alert';
-                        const statusText = isGood 
-                          ? '良好' 
-                          : isWarning 
-                            ? '警告' 
-                            : '不足';
-
-                        const isExpanded = expandedStockId === stock.id;
-
-                        return (
-                          <React.Fragment key={stock.id}>
-                            <tr>
-                              <td style={{ fontFamily: 'var(--mono)', fontSize: '0.85rem' }}>
-                                {stock.attributes?.code || `#${stock.id}`}
-                              </td>
-                              <td style={{ fontWeight: 500, color: 'var(--text-main)' }}>
-                                {stock.product_name}
-                              </td>
-                              <td style={{ textAlign: 'right', fontWeight: 600, fontSize: '1.05rem' }}>
-                                {stock.quantity}
-                              </td>
-                              <td style={{ textAlign: 'right', color: 'var(--text-muted)' }}>
-                                {stock.minimum_quantity}
-                              </td>
-                              <td>
-                                <span className={`badge ${statusClass}`}>{statusText}</span>
-                              </td>
-                              <td>
-                                {renderSparkline(stock.recent_quantities)}
-                              </td>
-                              <td style={{ textAlign: 'center' }}>
-                                <button
-                                  type="button"
-                                  className="btn btn-secondary btn-xs"
-                                  onClick={() => toggleExpandRow(stock.id)}
-                                >
-                                  {isExpanded ? '閉じる ▲' : '操作 ▼'}
-                                </button>
-                              </td>
-                            </tr>
-                            
-                            {/* Expanded details row for inflow, outflow, stocktake */}
-                            {isExpanded && (
-                              <tr className="operations-tr">
-                                <td colSpan={7} className="operations-td">
-                                  <div className="operations-panel">
-                                    {/* Inflow Box */}
-                                    <div className="operation-box">
-                                      <h4>📥 入庫処理</h4>
-                                      <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                        <NumberInput
-                                          min={1}
-                                          value={opInflowQty}
-                                          onChange={(e) => setOpInflowQty(e.target.value)}
-                                          placeholder="数量"
-                                          containerStyle={{ flex: 1 }}
-                                        />
-                                        <button
-                                          type="button"
-                                          className="btn btn-primary btn-sm"
-                                          onClick={() => handleStockOperation(stock.id, 'inflow')}
-                                        >
-                                          入庫
-                                        </button>
-                                      </div>
-                                    </div>
-
-                                    {/* Outflow Box */}
-                                    <div className="operation-box">
-                                      <h4>📤 出庫処理</h4>
-                                      <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                        <NumberInput
-                                          min={1}
-                                          value={opOutflowQty}
-                                          onChange={(e) => setOpOutflowQty(e.target.value)}
-                                          placeholder="数量"
-                                          containerStyle={{ flex: 1 }}
-                                        />
-                                        <button
-                                          type="button"
-                                          className="btn btn-danger btn-sm"
-                                          onClick={() => handleStockOperation(stock.id, 'outflow')}
-                                        >
-                                          出庫
-                                        </button>
-                                      </div>
-                                    </div>
-
-                                    {/* Stocktake Box */}
-                                    <div className="operation-box">
-                                      <h4>📝 実在庫の棚卸</h4>
-                                      <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                        <NumberInput
-                                          min={0}
-                                          value={opStocktakeQty}
-                                          onChange={(e) => setOpStocktakeQty(e.target.value)}
-                                          placeholder="確定在庫数"
-                                          containerStyle={{ flex: 1 }}
-                                        />
-                                        <button
-                                          type="button"
-                                          className="btn btn-secondary btn-sm"
-                                          onClick={() => handleStockOperation(stock.id, 'stocktake')}
-                                          style={{ border: '1px solid var(--text-muted)' }}
-                                        >
-                                          確定
-                                        </button>
-                                      </div>
-                                    </div>
-                                  </div>
-                                </td>
-                              </tr>
-                            )}
-                          </React.Fragment>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                )}
-              </div>
-            </div>
-          </div>
+          <InventoryManagement addToast={addToast} />
         )}
 
         {activeTab === 'attendance' && (
-          <div className="section-card kiosk-main-card" style={{ padding: '2rem', animation: 'fadeIn 0.2s ease-out' }}>
-            <div className="section-header">
-              <h2>👥 勤怠管理システム</h2>
-              <span className={`badge ${isOnDuty ? 'badge-good' : 'badge-alert'}`}>
-                {isOnDuty ? '勤務中' : '勤務外'}
-              </span>
-            </div>
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2rem' }}>
-              <div style={{ fontSize: '3.5rem', fontWeight: 700, fontFamily: 'var(--mono)', color: 'var(--text-main)' }}>
-                {currentTime || '00:00:00'}
-              </div>
-              <div style={{ background: 'var(--bg-app)', border: '1px solid var(--border-color)', borderRadius: 'var(--border-radius-md)', padding: '2.5rem 4rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5rem', boxShadow: 'var(--shadow-sm)' }}>
-                <h3 style={{ margin: 0 }}>現在の状態: {isOnDuty ? '勤務中 (打刻済み)' : '勤務外'}</h3>
-                <Switch
-                  label={isOnDuty ? '打刻を解除 (退勤)' : '打刻を開始 (出勤)'}
-                  checked={isOnDuty}
-                  onChange={(e) => {
-                    const checked = e.target.checked;
-                    setIsOnDuty(checked);
-                    if (checked) {
-                      const now = new Date();
-                      setClockInTime(now.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }));
-                      addToast('出勤打刻を完了しました。', 'success');
-                    } else {
-                      setClockInTime(null);
-                      addToast('退勤打刻を完了しました。今日も一日お疲れ様でした！', 'success');
-                    }
-                  }}
-                />
-                {isOnDuty && clockInTime && (
-                  <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: '0.95rem' }}>
-                    出勤時刻: <strong>{clockInTime}</strong>
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
+          <AttendanceManagement addToast={addToast} />
         )}
 
         {activeTab === 'billing' && (
           <div className="section-card kiosk-main-card" style={{ padding: '2rem', animation: 'fadeIn 0.2s ease-out' }}>
             <div className="section-header">
-              <h2>📄 請求・売上管理システム</h2>
+              <h2>請求・売上管理システム</h2>
               <span className="badge badge-good">順調</span>
             </div>
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1.5rem', overflowY: 'auto', padding: '0.5rem' }}>
@@ -978,80 +860,47 @@ export const DashboardPage: React.FC = () => {
             </div>
           </div>
         )}
+        {activeTab === 'members' && (
+          <MemberManagement addToast={addToast} />
+        )}
+        {activeTab === 'masters' && (
+          <MasterManagement addToast={addToast} />
+        )}
+        {activeTab === 'customers' && (
+          <CustomerRegistry addToast={addToast} />
+        )}
+        {activeTab === 'projects' && user && (
+          <ProjectManagement addToast={addToast} isAdmin={user.role === 'admin'} />
+        )}
+        {activeTab === 'tasks' && user && (
+          <TaskManagement 
+            addToast={addToast} 
+            isAdmin={user.role === 'admin'} 
+            currentUser={{
+              id: user.id,
+              login_id: user.login_id || '',
+              organization_id: user.organization_id
+            }} 
+          />
+        )}
+        {activeTab === 'orders' && (
+          <OrderBoardPage />
+        )}
+        {activeTab === 'catalog_edit' && (
+          <CatalogManagementPage />
+        )}
+        {activeTab === 'purchase_orders' && (
+          <PurchaseOrderManagement addToast={addToast} />
+        )}
+        {activeTab === 'workflows' && (
+          <WorkflowManagement addToast={addToast} />
+        )}
+        {activeTab === 'workflow_settings' && (
+          <WorkflowSettings addToast={addToast} />
+        )}
       </main>
 
-      {/* Add Stock Modal */}
-      {showAddModal && (
-        <div className="modal-backdrop">
-          <div className="modal-content" style={{ maxWidth: '500px' }}>
-            <div className="modal-header">
-              <h2>📦 在庫商品の新規登録</h2>
-              <p>新しく倉庫・組織に登録する在庫商品の基本情報を入力してください。</p>
-            </div>
-            
-            <form onSubmit={handleAddStock} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <Input
-                id="productName"
-                type="text"
-                label="商品名 (必須)"
-                placeholder="例: ノートパソコン Core i7"
-                value={newProductName}
-                onChange={(e) => setNewProductName(e.target.value)}
-                required
-                containerClassName="form-group"
-              />
 
-              <Input
-                id="productCode"
-                type="text"
-                label="商品コード (オプション)"
-                placeholder="例: PC-001"
-                value={newProductCode}
-                onChange={(e) => setNewProductCode(e.target.value)}
-                containerClassName="form-group"
-              />
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                <NumberInput
-                  id="initialQty"
-                  label="初期在庫数"
-                  min={0}
-                  value={newQuantity}
-                  onChange={(e) => setNewQuantity(parseInt(e.target.value, 10) || 0)}
-                  containerClassName="form-group"
-                />
-
-                <NumberInput
-                  id="minQty"
-                  label="安全しきい値 (警告ライン)"
-                  min={0}
-                  value={newMinQuantity}
-                  onChange={(e) => setNewMinQuantity(parseInt(e.target.value, 10) || 0)}
-                  containerClassName="form-group"
-                />
-              </div>
-
-              <div className="modal-footer">
-                <button 
-                  type="button" 
-                  className="btn btn-secondary" 
-                  onClick={() => setShowAddModal(false)}
-                  disabled={submittingStock}
-                >
-                  キャンセル
-                </button>
-                <button 
-                  type="submit" 
-                  className="btn btn-primary"
-                  disabled={submittingStock}
-                >
-                  {submittingStock ? '登録中...' : '登録する'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
       {/* Fullscreen Quick Launcher Overlay */}
       {isLauncherOpen && (
@@ -1061,36 +910,120 @@ export const DashboardPage: React.FC = () => {
             <div className="quick-launcher-grid">
               <button 
                 type="button" 
-                className={`quick-launcher-item ${activeTab === 'portal' ? 'active' : ''}`}
+                className={`menu-button ${activeTab === 'portal' ? 'active' : ''}`}
                 onClick={() => { setActiveTab('portal'); setIsLauncherOpen(false); }}
               >
-                <span className="quick-launcher-icon">🏠</span>
-                <span className="quick-launcher-name">総合ポータル</span>
+                <PortalIcon size={28} />
+                <span className="menu-text">ポータル</span>
               </button>
               <button 
                 type="button" 
-                className={`quick-launcher-item ${activeTab === 'stocks' ? 'active' : ''}`}
+                className={`menu-button ${activeTab === 'stocks' ? 'active' : ''}`}
                 onClick={() => { setActiveTab('stocks'); setIsLauncherOpen(false); }}
               >
-                <span className="quick-launcher-icon">📦</span>
-                <span className="quick-launcher-name">在庫管理</span>
+                <StockIcon size={28} />
+                <span className="menu-text">在庫</span>
               </button>
               <button 
                 type="button" 
-                className={`quick-launcher-item ${activeTab === 'attendance' ? 'active' : ''}`}
+                className={`menu-button ${activeTab === 'attendance' ? 'active' : ''}`}
                 onClick={() => { setActiveTab('attendance'); setIsLauncherOpen(false); }}
               >
-                <span className="quick-launcher-icon">👥</span>
-                <span className="quick-launcher-name">勤怠管理</span>
+                <AttendanceIcon size={28} />
+                <span className="menu-text">勤怠</span>
               </button>
               <button 
                 type="button" 
-                className={`quick-launcher-item ${activeTab === 'billing' ? 'active' : ''}`}
+                className={`menu-button ${activeTab === 'billing' ? 'active' : ''}`}
                 onClick={() => { setActiveTab('billing'); setIsLauncherOpen(false); }}
               >
-                <span className="quick-launcher-icon">📄</span>
-                <span className="quick-launcher-name">請求・売上</span>
+                <BillingIcon size={28} />
+                <span className="menu-text">売上</span>
               </button>
+              <button 
+                type="button" 
+                className={`menu-button ${activeTab === 'members' ? 'active' : ''}`}
+                onClick={() => { setActiveTab('members'); setIsLauncherOpen(false); }}
+              >
+                <MemberIcon size={28} />
+                <span className="menu-text">メンバー</span>
+              </button>
+              <button 
+                type="button" 
+                className={`menu-button ${activeTab === 'masters' ? 'active' : ''}`}
+                onClick={() => { setActiveTab('masters'); setIsLauncherOpen(false); }}
+              >
+                <MasterIcon size={28} />
+                <span className="menu-text">管理</span>
+              </button>
+              <button 
+                type="button" 
+                className={`menu-button ${activeTab === 'customers' ? 'active' : ''}`}
+                onClick={() => { setActiveTab('customers'); setIsLauncherOpen(false); }}
+              >
+                <CustomerIcon size={28} />
+                <span className="menu-text">顧客</span>
+              </button>
+              <button 
+                type="button" 
+                className={`menu-button ${activeTab === 'projects' ? 'active' : ''}`}
+                onClick={() => { setActiveTab('projects'); setIsLauncherOpen(false); }}
+              >
+                <ProjectIcon size={28} />
+                <span className="menu-text">プロジェクト</span>
+              </button>
+              <button 
+                type="button" 
+                className={`menu-button ${activeTab === 'tasks' ? 'active' : ''}`}
+                onClick={() => { setActiveTab('tasks'); setIsLauncherOpen(false); }}
+              >
+                <TaskIcon size={28} />
+                <span className="menu-text">タスク</span>
+              </button>
+              <button 
+                type="button" 
+                className={`menu-button ${activeTab === 'orders' ? 'active' : ''}`}
+                onClick={() => { setActiveTab('orders'); setIsLauncherOpen(false); }}
+              >
+                <OrderIcon size={28} />
+                <span className="menu-text">注文管理</span>
+              </button>
+              <button 
+                type="button" 
+                className={`menu-button ${activeTab === 'catalog_edit' ? 'active' : ''}`}
+                onClick={() => { setActiveTab('catalog_edit'); setIsLauncherOpen(false); }}
+              >
+                <CatalogIcon size={28} />
+                <span className="menu-text">メニュー</span>
+              </button>
+              {addons.includes('purchase_order') && (
+                <button 
+                  type="button" 
+                  className={`menu-button ${activeTab === 'purchase_orders' ? 'active' : ''}`}
+                  onClick={() => { setActiveTab('purchase_orders'); setIsLauncherOpen(false); }}
+                >
+                  <PurchaseIcon size={28} />
+                  <span className="menu-text">発注</span>
+                </button>
+              )}
+              <button 
+                type="button" 
+                className={`menu-button ${activeTab === 'workflows' ? 'active' : ''}`}
+                onClick={() => { setActiveTab('workflows'); setIsLauncherOpen(false); }}
+              >
+                <WorkflowIcon size={28} />
+                <span className="menu-text">申請・報告</span>
+              </button>
+              {user?.role === 'admin' && (
+                <button 
+                  type="button" 
+                  className={`menu-button ${activeTab === 'workflow_settings' ? 'active' : ''}`}
+                  onClick={() => { setActiveTab('workflow_settings'); setIsLauncherOpen(false); }}
+                >
+                  <SettingIcon size={28} />
+                  <span className="menu-text">申請設定</span>
+                </button>
+              )}
             </div>
             <button 
               type="button" 

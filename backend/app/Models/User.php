@@ -85,4 +85,12 @@ class User extends Authenticatable implements JWTSubject, WebAuthnAuthenticatabl
     {
         return $this->belongsTo(Organization::class, 'default_organization_id');
     }
+
+    /**
+     * Get the approval classes this user belongs to.
+     */
+    public function approvalClasses(): BelongsToMany
+    {
+        return $this->belongsToMany(ApprovalClass::class, 'user_approval_classes');
+    }
 }

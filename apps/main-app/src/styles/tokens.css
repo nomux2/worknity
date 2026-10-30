@@ -1,0 +1,166 @@
+/**
+ * Worknity Design System - Tokens (Vanilla CSS)
+ * 
+ * 構造:
+ * 1. Primitive Tokens (実色パレットの定義)
+ * 2. Semantic Tokens (コンポーネントが参照する役割別トークン)
+ *    - Light Mode (:root デフォルト - ウォームサンドベージュ × ディープネイビー)
+ *    - Dark Mode  (:root.dark-mode - ディープネイビー × コバルトスカイ)
+ * 3. Backward Compatibility Aliases (旧変数名との完全互換)
+ */
+
+:root {
+  /* ==========================================================================
+     1. Primitive Tokens (カラーパレット)
+     後から色味を微調整したい場合は、このパレット数値を変更します。
+     ========================================================================== */
+
+  /* Sand / Warm Neutral (ライトモード用ベース) */
+  --palette-sand-50:  #f8f6f0; /* アプリ背景 */
+  --palette-sand-100: #f0ece1; /* ホバー・セカンダリ面 */
+  --palette-sand-200: #e2ddd0; /* 境界線・区切り */
+  --palette-sand-300: #c9c2b1;
+  --palette-sand-700: #5c554b; /* サブテキスト */
+  --palette-sand-900: #2c2825; /* 本文・タイトル用ウォームチャコール */
+
+  /* Deep Navy / Slate (ダークモード用ベース & ライトモードPrimary) */
+  --palette-navy-950: #0a0f1d; /* ダークモード最深部背景 */
+  --palette-navy-900: #101828; /* ダークモードカード背景 */
+  --palette-navy-800: #17223b; /* ダークモード入力・ホバー面 */
+  --palette-navy-700: #1e293b;
+  --palette-slate-600:#475569;
+  --palette-slate-400:#94a3b8; /* ダークモードサブテキスト */
+  --palette-slate-100:#f1f5f9; /* ダークモード本文テキスト */
+  --palette-pure-white: #ffffff;
+
+  /* Primary Brand - Light (ディープスレートネイビー) */
+  --palette-primary-light-default: #1e3a5f;
+  --palette-primary-light-hover:   #152943;
+  --palette-primary-light-subtle:  rgba(30, 58, 95, 0.08);
+
+  /* Primary Brand - Dark (鮮明なコバルト / スカイブルー) */
+  --palette-primary-dark-default:  #38bdf8;
+  --palette-primary-dark-hover:    #0ea5e9;
+  --palette-primary-dark-subtle:   rgba(56, 189, 248, 0.15);
+
+  /* Semantic - Success (正常・承認・在庫十分) */
+  --palette-success-text-light:   #15803d;
+  --palette-success-bg-light:     #f0fdf4;
+  --palette-success-border-light: #bbf7d0;
+  --palette-success-text-dark:    #4ade80;
+  --palette-success-bg-dark:      rgba(34, 197, 94, 0.15);
+  --palette-success-border-dark:  rgba(34, 197, 94, 0.3);
+
+  /* Semantic - Warning (注意・要確認・発注点近傍) */
+  --palette-warning-text-light:   #b45309;
+  --palette-warning-bg-light:     #fffbeb;
+  --palette-warning-border-light: #fde68a;
+  --palette-warning-text-dark:    #fbbf24;
+  --palette-warning-bg-dark:      rgba(245, 158, 11, 0.15);
+  --palette-warning-border-dark:  rgba(245, 158, 11, 0.3);
+
+  /* Semantic - Danger (危険・削除・欠品・重大エラー) */
+  --palette-danger-text-light:    #b91c1c;
+  --palette-danger-bg-light:      #fef2f2;
+  --palette-danger-border-light:  #fecaca;
+  --palette-danger-text-dark:     #f87171;
+  --palette-danger-bg-dark:       rgba(239, 68, 68, 0.15);
+  --palette-danger-border-dark:   rgba(239, 68, 68, 0.3);
+
+  /* ==========================================================================
+     2. Semantic Tokens (Light Mode - デフォルト)
+     コンポーネントはこのセマンティックトークンを参照します。
+     ========================================================================== */
+
+  /* 背景・面 */
+  --bg-app:        var(--palette-sand-50);
+  --bg-card:       var(--palette-pure-white);
+  --bg-input:      var(--palette-pure-white);
+  --bg-hover:      var(--palette-sand-100);
+  --border-color:  var(--palette-sand-200);
+
+  /* テキスト */
+  --text-main:     var(--palette-sand-900);
+  --text-muted:    var(--palette-sand-700);
+  --text-inverse:  var(--palette-pure-white);
+
+  /* 主要アクション (Primary) */
+  --primary:       var(--palette-primary-light-default);
+  --primary-hover: var(--palette-primary-light-hover);
+  --primary-light: var(--palette-primary-light-subtle);
+
+  /* セマンティック (3階層) */
+  --color-success-text:   var(--palette-success-text-light);
+  --color-success-bg:     var(--palette-success-bg-light);
+  --color-success-border: var(--palette-success-border-light);
+
+  --color-warning-text:   var(--palette-warning-text-light);
+  --color-warning-bg:     var(--palette-warning-bg-light);
+  --color-warning-border: var(--palette-warning-border-light);
+
+  --color-danger-text:    var(--palette-danger-text-light);
+  --color-danger-bg:      var(--palette-danger-bg-light);
+  --color-danger-border:  var(--palette-danger-border-light);
+
+  /* メニュー・シャドウ */
+  --menu-text-color:        var(--palette-sand-900);
+  --menu-text-stroke-color: var(--palette-pure-white);
+  --shadow-lg:   0 10px 25px -5px rgba(44, 40, 37, 0.05), 0 8px 10px -6px rgba(44, 40, 37, 0.05);
+  --shadow-glow: 0 0 15px rgba(30, 58, 95, 0.12);
+
+  /* ==========================================================================
+     3. Backward Compatibility Aliases (下位互換エイリアス)
+     既存コードで使われている旧変数名を安全に吸収します。
+     ========================================================================== */
+  --status-good:       var(--color-success-text);
+  --status-good-bg:    var(--color-success-bg);
+  --status-warning:    var(--color-warning-text);
+  --status-warning-bg: var(--color-warning-bg);
+  --status-alert:      var(--color-danger-text);
+  --status-alert-bg:   var(--color-danger-bg);
+  --status-danger:     var(--color-danger-text);
+  --status-danger-bg:  var(--color-danger-bg);
+}
+
+/* ==========================================================================
+   4. Semantic Tokens (Dark Mode override)
+   ダークモード時は役割トークンの参照先を切り替えます。
+   ========================================================================== */
+:root.dark-mode {
+  /* 背景・面 */
+  --bg-app:        var(--palette-navy-950);
+  --bg-card:       var(--palette-navy-900);
+  --bg-input:      var(--palette-navy-800);
+  --bg-hover:      var(--palette-navy-800);
+  --border-color:  rgba(255, 255, 255, 0.08);
+
+  /* テキスト */
+  --text-main:     var(--palette-slate-100);
+  --text-muted:    var(--palette-slate-400);
+  --text-inverse:  var(--palette-navy-950);
+
+  /* 主要アクション (Primary) */
+  --primary:       var(--palette-primary-dark-default);
+  --primary-hover: var(--palette-primary-dark-hover);
+  --primary-light: var(--palette-primary-dark-subtle);
+
+  /* セマンティック (3階層) */
+  --color-success-text:   var(--palette-success-text-dark);
+  --color-success-bg:     var(--palette-success-bg-dark);
+  --color-success-border: var(--palette-success-border-dark);
+
+  --color-warning-text:   var(--palette-warning-text-dark);
+  --color-warning-bg:     var(--palette-warning-bg-dark);
+  --color-warning-border: var(--palette-warning-border-dark);
+
+  --color-danger-text:    var(--palette-danger-text-dark);
+  --color-danger-bg:      var(--palette-danger-bg-dark);
+  --color-danger-border:  var(--palette-danger-border-dark);
+
+  /* メニュー・シャドウ */
+  --menu-text-color:        var(--palette-slate-100);
+  --menu-text-stroke-color: var(--palette-navy-950);
+  --shadow-lg:   0 10px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.4);
+  --shadow-glow: 0 0 15px rgba(56, 189, 248, 0.25);
+}
+

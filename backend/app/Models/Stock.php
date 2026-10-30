@@ -18,6 +18,12 @@ class Stock extends Model
         'quantity',
         'minimum_quantity',
         'attributes',
+        'jan_code',
+        'description',
+        'image_url',
+        'price',
+        'brand_name',
+        'category_name',
     ];
 
     protected $casts = [

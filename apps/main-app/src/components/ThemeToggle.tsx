@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { SunIcon, MoonIcon } from './ui/Icons';
 
 interface ThemeToggleProps {
   className?: string;
@@ -38,8 +39,19 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({ className = '' }) => {
       className={`theme-toggle-btn ${className}`}
       type="button"
       aria-label="テーマ切り替え"
+      style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
     >
-      {isDark ? '☀️ ライトモード' : '🌙 ダークモード'}
+      {isDark ? (
+        <>
+          <SunIcon size={16} />
+          <span>ライトモード</span>
+        </>
+      ) : (
+        <>
+          <MoonIcon size={16} />
+          <span>ダークモード</span>
+        </>
+      )}
     </button>
   );
 };

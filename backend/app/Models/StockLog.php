@@ -15,6 +15,7 @@ class StockLog extends Model
         'organization_id',
         'stock_id',
         'user_id',
+        'purchase_order_id',
         'operation',
         'prior_quantity',
         'new_quantity',
@@ -26,6 +27,14 @@ class StockLog extends Model
     public function organization(): BelongsTo
     {
         return $this->belongsTo(Organization::class);
+    }
+
+    /**
+     * Get the purchase order this log is related to.
+     */
+    public function purchaseOrder(): BelongsTo
+    {
+        return $this->belongsTo(PurchaseOrder::class, 'purchase_order_id');
     }
 
     /**
