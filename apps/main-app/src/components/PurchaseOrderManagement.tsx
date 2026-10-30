@@ -530,7 +530,7 @@ export const PurchaseOrderManagement: React.FC<PurchaseOrderManagementProps> = (
       </div>
 
       {/* RIGHT PANE: Order Detail or Form */}
-      <div className="right-pane" style={{ flex: isPrintPreview ? '1' : '2', background: isPrintPreview ? '#fff' : 'var(--surface)' }}>
+      <div className="right-pane" style={{ flex: isPrintPreview ? '1' : '2', background: isPrintPreview ? '#fff' : 'var(--bg-card)' }}>
         
         {/* PRINT PREVIEW MODE VIEW */}
         {isPrintPreview && selectedOrder && (

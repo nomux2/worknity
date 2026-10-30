@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useRouter } from '../hooks/useRouter';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { Input } from '../components/ui/Input';
 import { Switch } from '../components/ui/Switch';
@@ -67,8 +68,10 @@ export const DashboardPage: React.FC = () => {
     toggleAddon
   } = useAuth();
 
-  // Portal & navigation states
-  const [activeTab, setActiveTab] = useState<'portal' | 'stocks' | 'attendance' | 'billing' | 'members' | 'masters' | 'customers' | 'projects' | 'tasks' | 'orders' | 'catalog_edit' | 'purchase_orders' | 'workflows' | 'workflow_settings'>('portal');
+  // Portal & navigation states with URL router synchronization
+  const { currentTab: activeTab, navigateToTab: setActiveTab } = useRouter({
+    isAdmin: user?.role === 'admin'
+  });
   const [isLauncherOpen, setIsLauncherOpen] = useState<boolean>(false);
   const [showAddonPanel, setShowAddonPanel] = useState<boolean>(false);
 
