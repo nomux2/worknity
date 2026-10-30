@@ -73,11 +73,12 @@
      ========================================================================== */
 
   /* 背景・面 */
-  --bg-app:        var(--palette-sand-50);
-  --bg-card:       var(--palette-pure-white);
-  --bg-input:      var(--palette-pure-white);
-  --bg-hover:      var(--palette-sand-100);
-  --border-color:  var(--palette-sand-200);
+  --bg-app:            var(--palette-sand-50);
+  --bg-card:           var(--palette-pure-white);
+  --bg-card-secondary: var(--palette-sand-100);
+  --bg-input:          var(--palette-pure-white);
+  --bg-hover:          var(--palette-sand-100);
+  --border-color:      var(--palette-sand-200);
 
   /* テキスト */
   --text-main:     var(--palette-sand-900);
@@ -112,6 +113,8 @@
      3. Backward Compatibility Aliases (下位互換エイリアス)
      既存コードで使われている旧変数名を安全に吸収します。
      ========================================================================== */
+  --card-bg:           var(--bg-card);
+  --card-bg-secondary: var(--bg-card-secondary);
   --status-good:       var(--color-success-text);
   --status-good-bg:    var(--color-success-bg);
   --status-warning:    var(--color-warning-text);
@@ -128,11 +131,12 @@
    ========================================================================== */
 :root.dark-mode {
   /* 背景・面 */
-  --bg-app:        var(--palette-navy-950);
-  --bg-card:       var(--palette-navy-900);
-  --bg-input:      var(--palette-navy-800);
-  --bg-hover:      var(--palette-navy-800);
-  --border-color:  rgba(255, 255, 255, 0.08);
+  --bg-app:            var(--palette-navy-950);
+  --bg-card:           var(--palette-navy-900);
+  --bg-card-secondary: var(--palette-navy-800);
+  --bg-input:          var(--palette-navy-800);
+  --bg-hover:          var(--palette-navy-800);
+  --border-color:      rgba(255, 255, 255, 0.08);
 
   /* テキスト */
   --text-main:     var(--palette-slate-100);

@@ -532,13 +532,13 @@ export const TaskManagement: React.FC<TaskManagementProps> = ({ addToast, isAdmi
         </div>
       ) : viewMode === 'kanban' ? (
         // ---------------- KANBAN VIEW ----------------
-        <div className="kanban-board" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', minHeight: '500px' }}>
+        <div className="kanban-board">
           {/* Lane TODO */}
-          <div className="kanban-lane" style={{ backgroundColor: 'var(--card-bg-secondary, #f8f9fa)', padding: '1rem', borderRadius: '8px' }}>
-            <h4 style={{ borderBottom: '2px solid var(--border-color)', paddingBottom: '0.5rem', marginBottom: '1rem' }}>未着手 (todo)</h4>
+          <div className="kanban-lane">
+            <h4 className="kanban-lane-title">未着手 (todo)</h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
               {tasks.filter(t => t.status === 'todo').map(task => (
-                <div key={task.id} className="card shadow-subtle hover-lift-effect" onClick={() => handleOpenDetail(task)} style={{ padding: '1rem', cursor: 'pointer' }}>
+                <div key={task.id} className="kanban-task-card" onClick={() => handleOpenDetail(task)}>
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.3rem' }}>
                     {task.project_id ? (projects.find(p => p.id === task.project_id)?.name || 'プロジェクト') : '日常ルーティン'}
                   </div>
@@ -555,11 +555,11 @@ export const TaskManagement: React.FC<TaskManagementProps> = ({ addToast, isAdmi
           </div>
  
           {/* Lane DOING */}
-          <div className="kanban-lane" style={{ backgroundColor: 'var(--card-bg-secondary, #f8f9fa)', padding: '1rem', borderRadius: '8px' }}>
-            <h4 style={{ borderBottom: '2px solid var(--border-color)', paddingBottom: '0.5rem', marginBottom: '1rem' }}>進行中 (doing)</h4>
+          <div className="kanban-lane">
+            <h4 className="kanban-lane-title">進行中 (doing)</h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
               {tasks.filter(t => t.status === 'doing').map(task => (
-                <div key={task.id} className="card shadow-subtle hover-lift-effect" onClick={() => handleOpenDetail(task)} style={{ padding: '1rem', cursor: 'pointer' }}>
+                <div key={task.id} className="kanban-task-card" onClick={() => handleOpenDetail(task)}>
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.3rem' }}>
                     {task.project_id ? (projects.find(p => p.id === task.project_id)?.name || 'プロジェクト') : '日常ルーティン'}
                   </div>
@@ -576,11 +576,11 @@ export const TaskManagement: React.FC<TaskManagementProps> = ({ addToast, isAdmi
           </div>
  
           {/* Lane DONE */}
-          <div className="kanban-lane" style={{ backgroundColor: 'var(--card-bg-secondary, #f8f9fa)', padding: '1rem', borderRadius: '8px' }}>
-            <h4 style={{ borderBottom: '2px solid var(--border-color)', paddingBottom: '0.5rem', marginBottom: '1rem' }}>完了 (done)</h4>
+          <div className="kanban-lane">
+            <h4 className="kanban-lane-title">完了 (done)</h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
               {tasks.filter(t => t.status === 'done').map(task => (
-                <div key={task.id} className="card shadow-subtle hover-lift-effect" onClick={() => handleOpenDetail(task)} style={{ padding: '1rem', cursor: 'pointer', opacity: 0.7 }}>
+                <div key={task.id} className="kanban-task-card" onClick={() => handleOpenDetail(task)} style={{ opacity: 0.75 }}>
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.3rem' }}>
                     {task.project_id ? (projects.find(p => p.id === task.project_id)?.name || 'プロジェクト') : '日常ルーティン'}
                   </div>
@@ -621,7 +621,7 @@ export const TaskManagement: React.FC<TaskManagementProps> = ({ addToast, isAdmi
           <div className="calendar-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '2px', backgroundColor: 'var(--border-color)', padding: '2px', borderRadius: '4px' }}>
             {calendarDays.map((date, idx) => {
               if (date === null) {
-                return <div key={`empty-${idx}`} className="calendar-cell empty" style={{ backgroundColor: 'var(--card-bg-secondary, #f8f9fa)', minHeight: '100px' }} />;
+                return <div key={`empty-${idx}`} className="calendar-cell empty" style={{ backgroundColor: 'var(--bg-card-secondary)', minHeight: '100px' }} />;
               }
  
               const dateYmd = date.toISOString().split('T')[0];
@@ -636,26 +636,26 @@ export const TaskManagement: React.FC<TaskManagementProps> = ({ addToast, isAdmi
                   key={dateYmd} 
                   className={`calendar-cell ${isToday ? 'today' : ''}`} 
                   style={{ 
-                    backgroundColor: isToday ? 'rgba(var(--color-primary-rgb), 0.05)' : 'var(--card-bg, #ffffff)', 
+                    backgroundColor: isToday ? 'var(--primary-light)' : 'var(--bg-card)', 
                     minHeight: '120px', 
                     padding: '0.3rem', 
                     display: 'flex', 
                     flexDirection: 'column', 
                     justifyContent: 'space-between',
-                    border: isToday ? '2px solid var(--color-primary)' : '1px solid var(--border-color)'
+                    border: isToday ? '2px solid var(--primary)' : '1px solid var(--border-color)'
                   }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', fontWeight: isToday ? 'bold' : 'normal' }}>
-                    <span style={{ color: date.getDay() === 0 ? '#ef4444' : date.getDay() === 6 ? 'var(--color-primary)' : 'inherit' }}>
+                    <span style={{ color: date.getDay() === 0 ? '#ef4444' : date.getDay() === 6 ? 'var(--primary)' : 'inherit' }}>
                       {dateNumber}
                     </span>
-                    {isToday && <span style={{ fontSize: '0.7rem', color: 'var(--color-primary)' }}>今日</span>}
+                    {isToday && <span style={{ fontSize: '0.7rem', color: 'var(--primary)' }}>今日</span>}
                   </div>
  
                   <div className="calendar-cell-tasks" style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', marginTop: '0.3rem', overflow: 'hidden', flexGrow: 1 }}>
                     {tasksForDay.slice(0, 3).map(inst => {
                       let statusStyle = { borderLeft: '3px solid #6b7280' }; // todo (gray)
-                      if (inst.task.status === 'doing') statusStyle = { borderLeft: '3px solid var(--color-primary)' };
+                      if (inst.task.status === 'doing') statusStyle = { borderLeft: '3px solid var(--primary)' };
                       if (inst.task.status === 'done') statusStyle = { borderLeft: '3px solid #10b981', textDecoration: 'line-through', opacity: 0.6 } as any;
  
                       return (
@@ -666,7 +666,7 @@ export const TaskManagement: React.FC<TaskManagementProps> = ({ addToast, isAdmi
                           style={{
                             fontSize: '0.75rem',
                             padding: '2px 4px',
-                            backgroundColor: 'var(--card-bg-secondary, #f3f4f6)',
+                            backgroundColor: 'var(--bg-card-secondary)',
                             borderRadius: '2px',
                             cursor: 'pointer',
                             overflow: 'hidden',
@@ -763,7 +763,7 @@ export const TaskManagement: React.FC<TaskManagementProps> = ({ addToast, isAdmi
               </div>
  
               {/* REPEAT RULE SECTION */}
-              <div style={{ border: '1px solid var(--border-color)', borderRadius: '6px', padding: '1rem', marginTop: '1rem', backgroundColor: 'var(--card-bg-secondary)' }}>
+              <div style={{ border: '1px solid var(--border-color)', borderRadius: '6px', padding: '1rem', marginTop: '1rem', backgroundColor: 'var(--bg-card-secondary)' }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontWeight: 'bold' }}>
                   <input
                     type="checkbox"
@@ -944,7 +944,7 @@ export const TaskManagement: React.FC<TaskManagementProps> = ({ addToast, isAdmi
                 <h4>申し送り・コメント</h4>
                 
                 {/* Comments List */}
-                <div style={{ flexGrow: 1, maxHeight: '300px', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: '4px', padding: '0.8rem', display: 'flex', flexDirection: 'column', gap: '0.8rem', backgroundColor: 'var(--card-bg-secondary)' }}>
+                <div style={{ flexGrow: 1, maxHeight: '300px', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: '4px', padding: '0.8rem', display: 'flex', flexDirection: 'column', gap: '0.8rem', backgroundColor: 'var(--bg-card-secondary)' }}>
                   {loadingComments ? (
                     <div style={{ textAlign: 'center', color: 'var(--text-muted)' }}>コメントを読み込み中...</div>
                   ) : comments.length === 0 ? (
@@ -955,7 +955,7 @@ export const TaskManagement: React.FC<TaskManagementProps> = ({ addToast, isAdmi
                       const typeColor = c.type === 'handover' ? '#f59e0b' : c.type === 'log' ? 'var(--color-primary)' : 'var(--text-muted)';
                       
                       return (
-                        <div key={c.id || cIdx} style={{ backgroundColor: 'var(--card-bg, #fff)', padding: '0.6rem', borderRadius: '4px', borderLeft: `4px solid ${typeColor}`, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                        <div key={c.id || cIdx} style={{ backgroundColor: 'var(--bg-card)', padding: '0.6rem', borderRadius: '4px', borderLeft: `4px solid ${typeColor}`, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.3rem' }}>
                             <span>{c.user?.login_id} ({typeLabel})</span>
                             <span>{c.importance === 'high' ? '重要' : ''}</span>
